@@ -1,0 +1,6 @@
+{
+  "name": "Ophanim-V1: ATLAS",
+  "description": "MENA-Focused Geospatial Intelligence & Predictive Threat Platform",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["AI Analysis", "Geospatial Intelligence", "Real-time Data Fusion"]
+}

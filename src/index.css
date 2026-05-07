@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #00ff41;
+  --color-brand-bg: #050505;
+  --color-brand-border: #1a1a1a;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--color-brand-bg)] text-white font-mono selection:bg-[var(--color-brand-primary)] selection:text-black;
+    @apply antialiased overflow-hidden;
+  }
+
+  /* Intelligence HUD aesthetic */
+  .hud-border {
+    @apply border border-[var(--color-brand-border)];
+  }
+
+  .hud-bg {
+    @apply bg-[var(--color-brand-bg)]/80 backdrop-blur-md;
+  }
+
+  .scanline {
+    width: 100%;
+    height: 100px;
+    z-index: 99;
+    background: linear-gradient(0deg, rgba(0, 255, 65, 0) 0%, rgba(0, 255, 65, 0.05) 50%, rgba(0, 255, 65, 0) 100%);
+    opacity: 0.1;
+    position: absolute;
+    bottom: 100%;
+    pointer-events: none;
+    animation: scanline 8s linear infinite;
+  }
+
+  @keyframes scanline {
+    0% { bottom: 100%; }
+    80% { bottom: -100px; }
+    100% { bottom: -100px; }
+  }
+}
+
+/* Map specific overrides */
+.leaflet-container {
+  @apply w-full h-full bg-[#0a0a0a]!;
+}
+
+/* Custom Tactical Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-black;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-[#333] hover:bg-[var(--color-brand-primary)];
+}
+

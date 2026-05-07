@@ -1,0 +1,14 @@
+[
+  {
+    "id": "c1",
+    "title": "Strait of Hormuz Sentinel",
+    "lesson": "Tanker speed reductions (< 5 knots) without engine distress signals often precede boarding events or tactical positioning in the Strait.",
+    "context": "Maritime Security"
+  },
+  {
+    "id": "c2",
+    "title": "Bab el-Mandeb Aerial Pattern",
+    "lesson": "UAV clustering at high altitudes (> 20,000ft) without transponder data usually indicates high-level ISR prep-work for kinetic strikes.",
+    "context": "Aerial Intelligence"
+  }
+]
