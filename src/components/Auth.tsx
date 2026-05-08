@@ -41,7 +41,9 @@ export default function Auth({ onSuccess }: AuthProps) {
         throw new Error("SUPABASE_CREDENTIALS_MISSING: You must set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Secrets panel.");
       }
 
-      
+      // 1. Establish anonymous session
+      const { error: authError } = await supabase.auth.signInAnonymously();
+      if (authError) throw authError;
 
       // 2. Record data in Supabase table
       const { error: insertError } = await supabase.from('operators').insert([{ name, email }]);
@@ -127,10 +129,10 @@ export default function Auth({ onSuccess }: AuthProps) {
           
           <div className="mb-6">
             <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
-               <UserPlus className="w-5 h-5" /> INITIALIZE_OPERATOR
+               <UserPlus className="w-5 h-5" /> INITIALIZE_USER
             </h2>
             <p className="text-[10px] text-[#00ff41]/60 leading-tight uppercase">
-              Give email and name and signup to try demo
+              Enter your name and email to access the system
             </p>
           </div>
 
@@ -143,18 +145,18 @@ export default function Auth({ onSuccess }: AuthProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-black/50 border border-[#00ff41]/30 p-3 outline-none focus:border-[#00ff41] transition-colors text-sm"
-                placeholder="OPERATOR NAME"
+                placeholder="YOUR NAME"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[9px] opacity-70">COMMS_CHANNEL (EMAIL)</label>
+              <label className="text-[9px] opacity-70">CONTACT_EMAIL</label>
               <input 
                 type="email" 
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-black/50 border border-[#00ff41]/30 p-3 outline-none focus:border-[#00ff41] transition-colors text-sm"
-                placeholder="operator@ophanim.intel"
+                placeholder="user@system.intel"
               />
             </div>
 

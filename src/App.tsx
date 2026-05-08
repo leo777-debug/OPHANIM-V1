@@ -44,8 +44,10 @@ export type MapLayers = {
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
-  const [demoAccess, setDemoAccess] = useState(false);
-  const [activeTab, setActiveTab] = useState<"streams" | "news" | "cognition" | "operators">("streams");
+  const [demoAccess, setDemoAccess] = useState(() => {
+    return localStorage.getItem("ophanim_demo_access") === "true";
+  });
+  const [activeTab, setActiveTab] = useState<"streams" | "news" | "cognition">("streams");
   const [layers, setLayers] = useState<MapLayers>({
     aircraft: true,
     vessel: true,
@@ -55,7 +57,6 @@ export default function App() {
   const [events, setEvents] = useState<IntelligenceEvent[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [cognition, setCognition] = useState<CognitionLesson[]>([]);
-  const [operators, setOperators] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<IntelligenceEvent | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -102,28 +103,8 @@ export default function App() {
     });
   };
 
-  const fetchOperators = async () => {
-    try {
-      const { data, error } = await supabase.from('operators').select('*').order('created_at', { ascending: false });
-      if (error) {
-        if (error.message === 'Failed to fetch') {
-           addLog("DB_ACCESS_DENIED: SUPABASE_CONNECTION_ERROR.");
-        } else {
-           addLog(`DB_QUERY_ERROR: ${error.message} (Is 'operators' table created?)`);
-        }
-        return;
-      }
-      setOperators(data || []);
-      addLog(`OPERATOR_REGISTRY_SYNCED: ${data?.length || 0} IDENTIFIED.`);
-    } catch (err) {
-      console.error("Op fetch error:", err);
-      addLog("DB_FATAL: UNEXPECTED_ERROR_IN_FETCH.");
-    }
-  };
-
   const fetchIntel = async () => {
     addLog("POLLING DATA STREAMS...");
-    fetchOperators();
     try {
       const responses = await Promise.all([
         fetch(`${API_BASE}/api/news`),
@@ -390,6 +371,13 @@ export default function App() {
     }
   };
 
+  const handleLogout = async () => {
+    localStorage.removeItem("ophanim_demo_access");
+    setDemoAccess(false);
+    await supabase.auth.signOut();
+    addLog("SESSION_TERMINATED: LOGOUT_SUCCESS.");
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -408,19 +396,11 @@ export default function App() {
     if (!session && !demoAccess) return;
     fetchIntel();
     
-    // Subscribe to realtime operator registrations
-    const opsChannel = supabase
-      .channel('operators-changes')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'operators' }, (payload) => {
-        setOperators(prev => [payload.new, ...prev]);
-        addLog(`OPERATOR_REGISTERED: ${payload.new.email}`);
-      })
-      .subscribe();
+    // Subscribe to realtime streams
 
     const interval = setInterval(fetchIntel, 60000); // Poll every minute
     return () => {
       clearInterval(interval);
-      supabase.removeChannel(opsChannel);
     };
   }, [session, demoAccess]);
 
@@ -438,7 +418,14 @@ export default function App() {
   }, [session, autoAnalysisActive, isAnalyzing, events.length]);
 
   if (!session && !demoAccess) {
-    return <Auth onSuccess={() => setDemoAccess(true)} />;
+    return (
+      <Auth 
+        onSuccess={() => {
+          localStorage.setItem("ophanim_demo_access", "true");
+          setDemoAccess(true);
+        }} 
+      />
+    );
   }
 
   return (
@@ -474,15 +461,9 @@ export default function App() {
           </button>
           <button 
             onClick={() => setActiveTab("cognition")}
-            className={cn("flex-1 flex items-center justify-center gap-2 border-r hud-border", activeTab === "cognition" && "bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]")}
+            className={cn("flex-1 flex items-center justify-center gap-2", activeTab === "cognition" && "bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]")}
           >
             <BrainCircuit className="w-3 h-3" /> COG
-          </button>
-          <button 
-            onClick={() => setActiveTab("operators")}
-            className={cn("flex-1 flex items-center justify-center gap-2", activeTab === "operators" && "bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]")}
-          >
-            <Shield className={cn("w-3 h-3", operators.length > 0 && "animate-pulse")} /> OPS {operators.length > 0 && `(${operators.length})`}
           </button>
         </div>
 
@@ -540,18 +521,6 @@ export default function App() {
                   </label>
                 </div>
 
-                {operators.length > 0 && (
-                  <div className="mb-4 p-2 border-l-2 border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)]/5">
-                    <div className="text-[8px] opacity-50 mb-1">LATEST_JOINED_OPERATORS:</div>
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                      {operators.slice(0, 3).map((op, i) => (
-                        <div key={i} className="text-[9px] whitespace-nowrap bg-black/40 px-1 border border-[var(--color-brand-primary)]/20">
-                           {op.email.split('@')[0]}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                   {/* Tactical Readout Sidebar (Only if selected) */}
                   {selectedEvent && (
@@ -650,53 +619,6 @@ export default function App() {
                 ))}
               </motion.div>
             )}
-            {activeTab === "operators" && (
-              <motion.div 
-                key="operators"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="flex flex-col gap-3"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-[10px] opacity-40">ACTIVE_OPERATOR_REGISTRY</div>
-                  <button 
-                    onClick={fetchOperators}
-                    className="text-[9px] hover:text-[var(--color-brand-primary)] flex items-center gap-1 opacity-60 hover:opacity-100"
-                  >
-                    <RefreshCw className="w-2.5 h-2.5" /> RE-SYNC
-                  </button>
-                </div>
-                
-                {operators.length === 0 ? (
-                  <div className="p-6 border hud-border border-dashed opacity-40 text-center text-[10px] space-y-4">
-                    <Database className="w-8 h-8 mx-auto opacity-20" />
-                    <div>
-                      NO_OPERATORS_IDENTIFIED // CHECK_DB_CONNECTION
-                      <p className="mt-2 text-[8px] leading-tight">
-                        ENSURE 'operators' TABLE EXISTS IN SUPABASE<br/>
-                        COLUMNS: id, name, email, created_at
-                      </p>
-                    </div>
-                    <div className="text-red-500 font-bold border border-red-500/20 p-2 bg-red-500/5">
-                      DB_STATE: {supabase.supabaseUrl.includes('placeholder') ? "MODE_DEMO_BYPASS" : "CONNECTED"}
-                    </div>
-                  </div>
-                ) : operators.map((op, i) => (
-                  <div key={i} className="p-2 border hud-border hud-bg flex items-center gap-3 relative overflow-hidden group">
-                    <div className="absolute top-0 left-0 w-[2px] h-full bg-[var(--color-brand-primary)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="w-8 h-8 rounded bg-[var(--color-brand-primary)]/20 flex items-center justify-center shrink-0">
-                      <Shield className="w-4 h-4 text-[var(--color-brand-primary)]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[10px] font-bold truncate">{op.name || "UNKNOWN_OPERATOR"}</div>
-                      <div className="text-[8px] opacity-60 truncate">{op.email}</div>
-                    </div>
-                    <div className="text-[7px] opacity-30 whitespace-nowrap bg-black px-1">
-                      {op.created_at ? new Date(op.created_at).toLocaleTimeString() : 'RECENT'}
-                    </div>
-                  </div>
-                ))}
-              </motion.div>
-            )}
           </AnimatePresence>
 
           <section className="mt-auto pt-4 flex flex-col min-h-[150px]">
@@ -715,9 +637,11 @@ export default function App() {
         </div>
         
         <div className="p-4 border-t hud-border flex items-center justify-between text-[10px]">
-          <div className="flex items-center gap-1"><Wifi className="w-3 h-3" /> LINK: STABLE</div>
+          <button onClick={handleLogout} className="text-red-500/60 hover:text-red-500 hover:bg-red-500/10 px-1 border border-red-500/20 transition-all uppercase tracking-tighter">
+            DISCONNECT
+          </button>
           <button onClick={fetchIntel} className="hover:text-[var(--color-brand-primary)] flex items-center gap-1">
-            <RefreshCw className="w-4 h-4" /> SYNC
+            <RefreshCw className="w-3 h-3" /> SYNC
           </button>
         </div>
       </aside>
