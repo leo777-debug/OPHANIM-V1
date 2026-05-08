@@ -28,9 +28,7 @@ export default function Auth({ onSuccess }: AuthProps) {
       // 1. Check if we are using placeholder credentials
       const isPlaceholder = supabase.auth.getSession ? false : true; 
       // Actually the client is initialized. Let's check the URL.
-      if ((supabase as any).supabaseUrl?.includes('placeholder')) {
-        throw new Error("SUPABASE_CREDENTIALS_MISSING: You must set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Secrets panel.");
-      }
+     
 
       // 1. Establish anonymous session
       const { error: authError } = await supabase.auth.signInAnonymously();
