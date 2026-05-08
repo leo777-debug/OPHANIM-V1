@@ -49,11 +49,11 @@ export default function Auth({ onSuccess }: AuthProps) {
         throw new Error(errData.error || "IDENTIFICATION_FAILURE");
       }
 
-      // 1. Check if we are using placeholder credentials
-      const isPlaceholder = supabase.auth.getSession ? false : true; 
-      // Actually the client is initialized. Let's check the URL.
-      if ((supabase as any).supabaseUrl?.includes('placeholder')) {
-        throw new Error("SUPABASE_CREDENTIALS_MISSING: You must set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Secrets panel.");
+      // 1. Check if we are using placeholder or missing credentials
+      const sUrl = (supabase as any).supabaseUrl;
+      const sKey = (supabase as any).supabaseKey;
+      if (!sUrl || !sKey || sUrl.includes('placeholder')) {
+        throw new Error("SUPABASE_CREDENTIALS_MISSING: Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment variables/secrets.");
       }
 
       // 1. Establish anonymous session

@@ -1,5 +1,5 @@
 import express from "express";
-import { rateLimit } from "express-rate-limit";
+import rateLimit from "express-rate-limit";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs/promises";
@@ -48,7 +48,7 @@ async function startServer() {
   }));
   
   app.use(cors());
-  app.use(express.json({ limit: "10kb" })); // Max payload 10kb
+  app.use(express.json({ limit: "50kb" })); // Increased limit slightly
 
   // Global rate limiter
   const apiLimiter = rateLimit({
