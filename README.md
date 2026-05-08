@@ -15,5 +15,3 @@ CSV Import — Import custom intelligence data via CSV
 Auto-Monitor — Background threat scanning every 2 minutes
 
 
-TECH STACK
-LayerTechnologyFrontendReact + TypeScript + ViteStylingTailwind CSSMapLeaflet.jsAnimationFramer MotionBackendVercel Serverless FunctionsDatabaseSupabase (PostgreSQL)AI EngineDeepSeek V3 / Gemini 1.5 FlashDeploymentVercel
