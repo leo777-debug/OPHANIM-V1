@@ -1,5 +1,4 @@
 import express from "express";
-import rateLimit from "express-rate-limit";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs/promises";
@@ -13,11 +12,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Input Schemas
-const RegistrationSchema = z.object({
-  name: z.string().min(2).max(50).trim(),
-  email: z.string().email().toLowerCase().trim(),
-});
-
 const IntelligenceDataSchema = z.array(z.object({
   id: z.string(),
   type: z.enum(['vessel', 'aircraft', 'conflict', 'news', 'satellite']),
@@ -48,50 +42,7 @@ async function startServer() {
   }));
   
   app.use(cors());
-  app.use(express.json({ limit: "50kb" })); // Increased limit slightly
-
-  // Global rate limiter
-  const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 100, 
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "TOO_MANY_REQUESTS" }
-  });
-
-  // Strict limiter for Authentication/Registration (5 per 15 min)
-  const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 5,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "AUTH_THROTTLED: MAX_ATTEMPTS_EXCEEDED" }
-  });
-
-  // Strict limiter for AI Analysis
-  const analysisLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,
-    max: 20,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "EVOLUTION_THROTTLED" }
-  });
-
-  app.use("/api/", apiLimiter);
-  app.use("/api/auth", authLimiter);
-  app.use("/api/analyze", analysisLimiter);
-
-  // Auth/Registration Proxy (to enforce rate limits)
-  app.post("/api/auth/register", async (req, res) => {
-    const validated = RegistrationSchema.safeParse(req.body);
-    if (!validated.success) {
-      return res.status(400).json({ error: "INVALID_INPUT", details: validated.error.format() });
-    }
-    
-    // In a real app we might verify something here. 
-    // This endpoint exists mainly to enforce the authLimiter.
-    res.json({ status: "VERIFIED" });
-  });
+  app.use(express.json({ limit: "50kb" }));
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });

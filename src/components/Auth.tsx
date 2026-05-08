@@ -16,14 +16,6 @@ export default function Auth({ onSuccess }: AuthProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 0. Client-side Rate Limiting (Cooldown)
-    const lastReg = localStorage.getItem("ophanim_registration_ts");
-    const now = Date.now();
-    if (lastReg && now - parseInt(lastReg) < 30000) {
-      setError("RATE_LIMIT_EXCEEDED: Cooldown active. Please wait 30s.");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -34,21 +26,6 @@ export default function Auth({ onSuccess }: AuthProps) {
     }, 5000);
 
     try {
-      // 0. Server-side Rate Limiting Check
-      const verifyResp = await fetch(`${window.location.origin}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email })
-      });
-
-      if (verifyResp.status === 429) {
-        throw new Error("AUTH_THROTTLED: Please try again later.");
-      }
-      if (!verifyResp.ok) {
-        const errData = await verifyResp.json();
-        throw new Error(errData.error || "IDENTIFICATION_FAILURE");
-      }
-
       // 1. Check if we are using placeholder or missing credentials
       const sUrl = (supabase as any).supabaseUrl;
       const sKey = (supabase as any).supabaseKey;
