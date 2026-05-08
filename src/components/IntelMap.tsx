@@ -2,8 +2,9 @@ import React from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Plane, Ship, Orbit, Radio } from "lucide-react";
 import { IntelligenceEvent } from "../types";
+import { renderToString } from "react-dom/server";
 
 // Fix for default marker icons in Leaflet
 const markerIcon = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png";
@@ -17,6 +18,20 @@ const DefaultIcon = L.icon({
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
+
+const createTacticalIcon = (type: string, color: string = "#00ff41") => {
+  let iconComponent = <Radio className="w-5 h-5" />;
+  if (type === "aircraft") iconComponent = <Plane className="w-5 h-5" />;
+  if (type === "vessel") iconComponent = <Ship className="w-5 h-5" />;
+  if (type === "satellite") iconComponent = <Orbit className="w-5 h-5" />;
+
+  return L.divIcon({
+    html: `<div style="color: ${color}; filter: drop-shadow(0 0 5px ${color}44);">${renderToString(iconComponent)}</div>`,
+    className: "tactical-div-icon",
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+  });
+};
 
 interface IntelMapProps {
   events: IntelligenceEvent[];
@@ -51,39 +66,43 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
         
-        {events.map((event) => (
-          <React.Fragment key={event.id}>
-            <Marker 
-              position={[event.lat, event.lng]}
-              eventHandlers={{
-                click: () => onEventClick(event),
-              }}
-            >
-              <Popup className="tactical-popup">
-                <div className="text-xs bg-[#050505] text-[#00ff41] p-2 border border-[#00ff41]/20">
-                  <div className="font-bold border-b border-[#00ff41]/20 pb-1 mb-1">{event.label}</div>
-                  <div className="opacity-70">{event.type.toUpperCase()} | {new Date(event.timestamp).toLocaleTimeString()}</div>
-                  <div className="mt-1 text-[10px] leading-tight">{event.details}</div>
-                </div>
-              </Popup>
-            </Marker>
-            
-            {/* Threat radius visualization */}
-            {event.intensity > 0.6 && (
-              <Circle
-                center={[event.lat, event.lng]}
-                radius={30000 * event.intensity}
-                pathOptions={{
-                  color: event.intensity > 0.8 ? "#ff4444" : "#ffaa00",
-                  fillColor: event.intensity > 0.8 ? "#ff4444" : "#ffaa00",
-                  fillOpacity: 0.15,
-                  weight: 1,
-                  dashArray: "5, 5"
+        {events.map((event) => {
+          const color = event.intensity > 0.8 ? "#ff4444" : event.type === 'vessel' ? '#00eaff' : event.type === 'satellite' ? '#d400ff' : "#00ff41";
+          return (
+            <React.Fragment key={event.id}>
+              <Marker 
+                position={[event.lat, event.lng]}
+                icon={createTacticalIcon(event.type, color)}
+                eventHandlers={{
+                  click: () => onEventClick(event),
                 }}
-              />
-            )}
-          </React.Fragment>
-        ))}
+              >
+                <Popup className="tactical-popup">
+                  <div className="text-xs bg-[#050505] text-[#00ff41] p-2 border border-[#00ff41]/20">
+                    <div className="font-bold border-b border-[#00ff41]/20 pb-1 mb-1">{event.label}</div>
+                    <div className="opacity-70">{event.type.toUpperCase()} | {new Date(event.timestamp).toLocaleTimeString()}</div>
+                    <div className="mt-1 text-[10px] leading-tight">{event.details}</div>
+                  </div>
+                </Popup>
+              </Marker>
+              
+              {/* Threat radius visualization */}
+              {event.intensity > 0.6 && (
+                <Circle
+                  center={[event.lat, event.lng]}
+                  radius={30000 * event.intensity}
+                  pathOptions={{
+                    color: event.intensity > 0.8 ? "#ff4444" : "#ffaa00",
+                    fillColor: event.intensity > 0.8 ? "#ff4444" : "#ffaa00",
+                    fillOpacity: 0.15,
+                    weight: 1,
+                    dashArray: "5, 5"
+                  }}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
       </MapContainer>
 
       {/* Map Overlay Controls */}

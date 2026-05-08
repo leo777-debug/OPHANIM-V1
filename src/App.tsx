@@ -15,7 +15,10 @@ import {
   Database,
   BrainCircuit,
   RefreshCw,
-  Search
+  Search,
+  Plane,
+  Ship,
+  Orbit
 } from "lucide-react";
 import IntelMap from "./components/IntelMap";
 import { IntelligenceEvent, AnalysisResult, CognitionLesson, NewsItem } from "./types";
@@ -31,10 +34,23 @@ function cn(...inputs: ClassValue[]) {
 
 const API_BASE = (import.meta as any).env.VITE_API_URL || "";
 
+export type MapLayers = {
+  aircraft: boolean;
+  vessel: boolean;
+  satellite: boolean;
+  news: boolean;
+};
+
 export default function App() {
   const [session, setSession] = useState<any>(null);
   const [demoAccess, setDemoAccess] = useState(false);
   const [activeTab, setActiveTab] = useState<"streams" | "news" | "cognition">("streams");
+  const [layers, setLayers] = useState<MapLayers>({
+    aircraft: true,
+    vessel: true,
+    satellite: true,
+    news: true
+  });
   const [events, setEvents] = useState<IntelligenceEvent[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [cognition, setCognition] = useState<CognitionLesson[]>([]);
@@ -77,7 +93,7 @@ export default function App() {
               lng: e.geometry[0].coordinates[0],
               label: "NASA: " + e.title,
               intensity: 0.5,
-              details: "Environmental event detected: " + e.description || "Active event monitor.",
+              details: "Environmental event detected: " + (e.description || "Active event monitor."),
               timestamp: e.geometry[0].date
             });
           }
@@ -102,8 +118,38 @@ export default function App() {
         });
       }
 
+      // Add Satellite Tracking (Mocked for MENA area)
+      const sats = ["STARLINK-1024", "GPS-BIIA-10", "ISS-LOW-ORBIT", "INTELSAT-34"];
+      sats.forEach((name, i) => {
+        scrapedEvents.push({
+          id: "sat-" + i,
+          type: "satellite",
+          lat: 25.0 + (Math.random() - 0.5) * 15,
+          lng: 45.0 + (Math.random() - 0.5) * 15,
+          label: name,
+          intensity: 0.1,
+          details: `Orbital Node ${name} detected. Velocity: 7.6km/s. Signal: Stable.`,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      // Add Marine Traffic (Mocked for MENA area)
+      const ships = ["EVER-GIVEN-RELIEF", "COSCO-SHIPPING-PEARL", "MSC-ISABELLA", "MAERSK-MC-KINNEY"];
+      ships.forEach((name, i) => {
+        scrapedEvents.push({
+          id: "ship-" + i,
+          type: "vessel",
+          lat: 15.0 + (Math.random() - 0.5) * 10,
+          lng: 50.0 + (Math.random() - 0.5) * 10,
+          label: name,
+          intensity: 0.3,
+          details: `Marine vessel ${name} at cruise speed 18 knots. Identity: Verified Merchant.`,
+          timestamp: new Date().toISOString()
+        });
+      });
+
       // Add baseline MENA events if specific areas aren't covered
-      if (scrapedEvents.length < 3) {
+      if (scrapedEvents.length < 5) {
         scrapedEvents.push(
           {
             id: "v-hor-" + Date.now(),
@@ -135,6 +181,14 @@ export default function App() {
       console.error(err);
     }
   };
+
+  const filteredEvents = events.filter(e => {
+    if (e.type === "aircraft") return layers.aircraft;
+    if (e.type === "vessel") return layers.vessel;
+    if (e.type === "satellite") return layers.satellite;
+    if (e.type === "news") return layers.news;
+    return true;
+  });
 
   const [analysisStatus, setAnalysisStatus] = useState<string>("");
 
@@ -287,7 +341,35 @@ export default function App() {
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="flex flex-col gap-1"
               >
-                {events.map((event) => (
+                {/* Layer Toggles */}
+                <div className="grid grid-cols-2 gap-1 mb-4">
+                  <button 
+                    onClick={() => setLayers(l => ({ ...l, aircraft: !l.aircraft }))}
+                    className={cn("flex items-center gap-2 p-2 border hud-border text-[9px] transition-all", layers.aircraft ? "bg-[var(--color-brand-primary)] text-black font-bold" : "opacity-40")}
+                  >
+                    <Plane className="w-3 h-3" /> AERIAL
+                  </button>
+                  <button 
+                    onClick={() => setLayers(l => ({ ...l, vessel: !l.vessel }))}
+                    className={cn("flex items-center gap-2 p-2 border hud-border text-[9px] transition-all", layers.vessel ? "bg-[var(--color-brand-primary)] text-black font-bold" : "opacity-40")}
+                  >
+                    <Ship className="w-3 h-3" /> MARITIME
+                  </button>
+                  <button 
+                    onClick={() => setLayers(l => ({ ...l, satellite: !l.satellite }))}
+                    className={cn("flex items-center gap-2 p-2 border hud-border text-[9px] transition-all", layers.satellite ? "bg-[var(--color-brand-primary)] text-black font-bold" : "opacity-40")}
+                  >
+                    <Orbit className="w-3 h-3" /> ORBITAL
+                  </button>
+                  <button 
+                    onClick={() => setLayers(l => ({ ...l, news: !l.news }))}
+                    className={cn("flex items-center gap-2 p-2 border hud-border text-[9px] transition-all", layers.news ? "bg-[var(--color-brand-primary)] text-black font-bold" : "opacity-40")}
+                  >
+                    <Globe className="w-3 h-3" /> EONET
+                  </button>
+                </div>
+
+                {filteredEvents.map((event) => (
                   <button 
                     key={event.id}
                     onClick={() => setSelectedEvent(event)}
@@ -398,7 +480,7 @@ export default function App() {
       <main className="flex-1 relative flex flex-col shrink min-w-0">
         <div className="flex-1 min-h-0">
           <IntelMap 
-            events={events} 
+            events={filteredEvents} 
             selectedEvent={selectedEvent} 
             onEventClick={setSelectedEvent} 
           />
@@ -408,7 +490,7 @@ export default function App() {
         <div className="h-12 border-t hud-border hud-bg flex items-center px-4 justify-between shrink-0">
           <div className="flex items-center gap-4">
             <button 
-              onClick={handleAnalyze}
+              onClick={() => handleAnalyze(true)}
               disabled={isAnalyzing}
               className="flex items-center gap-2 bg-[var(--color-brand-primary)] text-black px-4 py-1 font-bold hover:bg-white hover:text-black transition-colors disabled:opacity-50"
             >

@@ -21,10 +21,14 @@ export default function Auth({ onSuccess }: AuthProps) {
     // Fire and forget Supabase tracking
     (async () => {
       try {
-        await supabase.from('operators').insert([{ name, email }]);
-        console.log("Operator record attempted");
+        const { error: insertError } = await supabase.from('operators').insert([{ name, email }]);
+        if (insertError) {
+          console.error("Supabase insert error:", insertError);
+        } else {
+          console.log("Operator record saved successfully");
+        }
       } catch (e) {
-        console.warn("Supabase record failed", e);
+        console.warn("Supabase unexpected error:", e);
       }
     })();
 
@@ -87,7 +91,7 @@ export default function Auth({ onSuccess }: AuthProps) {
                <UserPlus className="w-5 h-5" /> INITIALIZE_OPERATOR
             </h2>
             <p className="text-[10px] text-[#00ff41]/60 leading-tight uppercase">
-              Enter your deployment details below to access the live intelligence dashboard.
+              Give email and name and signup to try demo
             </p>
           </div>
 
@@ -125,7 +129,7 @@ export default function Auth({ onSuccess }: AuthProps) {
               disabled={loading}
               className="w-full bg-[#00ff41] text-black font-black py-4 px-6 hover:bg-white transition-all transform hover:scale-[1.02] cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 text-sm tracking-widest"
             >
-              {loading ? "ESTABLISHING..." : "SIGN UP TO TRY DEMO"}
+              {loading ? "ESTABLISHING..." : "TRY DEMO"}
             </button>
           </form>
 

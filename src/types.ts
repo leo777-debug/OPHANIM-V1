@@ -1,6 +1,6 @@
 export interface IntelligenceEvent {
   id: string;
-  type: "vessel" | "aircraft" | "conflict" | "news";
+  type: "vessel" | "aircraft" | "conflict" | "news" | "satellite";
   lat: number;
   lng: number;
   label: string;
