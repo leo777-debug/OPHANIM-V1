@@ -92,9 +92,11 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
                   positions={event.path}
                   pathOptions={{
                     color: color,
-                    weight: 1,
-                    opacity: 0.4,
-                    dashArray: "3, 6"
+                    weight: 1.5,
+                    opacity: 0.6,
+                    dashArray: "4, 8",
+                    lineCap: "round",
+                    lineJoin: "round"
                   }}
                 />
               )}

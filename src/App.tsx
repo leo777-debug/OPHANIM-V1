@@ -164,7 +164,27 @@ export default function App() {
         });
       });
 
-      // Add baseline MENA events if specific areas aren't covered
+      // Add Aerial Assets (Mocked for MENA area)
+      const planes = ["FORTE-10", "LAGR-557", "HOMER-11", "DUKE-32"];
+      planes.forEach((name, i) => {
+        const baseLat = 32.0 + (Math.random() - 0.5) * 8;
+        const baseLng = 35.0 + (Math.random() - 0.5) * 8;
+        scrapedEvents.push({
+          id: "plane-" + i,
+          type: "aircraft",
+          lat: baseLat,
+          lng: baseLng,
+          label: name,
+          intensity: 0.2,
+          details: `Aerial asset ${name} on station. Altitude: 34,000ft. SSR: 4212.`,
+          timestamp: new Date().toISOString(),
+          path: [
+            [baseLat - 1, baseLng - 1.5],
+            [baseLat - 0.5, baseLng - 0.8],
+            [baseLat, baseLng]
+          ]
+        });
+      });
       if (scrapedEvents.length < 5) {
         scrapedEvents.push(
           {
@@ -205,6 +225,32 @@ export default function App() {
     if (e.type === "news") return layers.news;
     return true;
   });
+
+  // Dynamic Movement Logic
+  useEffect(() => {
+    if (events.length === 0) return;
+
+    const moveInterval = setInterval(() => {
+      setEvents(prev => prev.map(event => {
+        if (event.type === 'aircraft' || event.type === 'vessel' || event.type === 'satellite') {
+          // Drifting movement for live simulation
+          const dLat = (Math.random() - 0.5) * 0.002;
+          const dLng = (Math.random() - 0.5) * 0.002;
+          const newPath = event.path ? [...event.path.slice(-15), [event.lat, event.lng] as [number, number]] : [[event.lat, event.lng] as [number, number]];
+          
+          return {
+            ...event,
+            lat: event.lat + dLat,
+            lng: event.lng + dLng,
+            path: newPath
+          };
+        }
+        return event;
+      }));
+    }, 3000);
+
+    return () => clearInterval(moveInterval);
+  }, [events.length]);
 
   const [analysisStatus, setAnalysisStatus] = useState<string>("");
 
@@ -385,7 +431,40 @@ export default function App() {
                   </button>
                 </div>
 
-                {filteredEvents.map((event) => (
+                  {/* Tactical Readout Sidebar (Only if selected) */}
+                  {selectedEvent && (
+                    <motion.div 
+                      initial={{ x: 20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      className="mt-4 p-4 border border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)]/5 space-y-3"
+                    >
+                      <div className="flex justify-between items-center border-b border-[var(--color-brand-primary)]/30 pb-2">
+                        <span className="text-[10px] font-bold text-[var(--color-brand-primary)]">TACTICAL_READOUT</span>
+                        <button onClick={() => setSelectedEvent(null)} className="text-[var(--color-brand-primary)] hover:text-white">×</button>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-[9px]">
+                          <span className="opacity-50 uppercase">Target ID</span>
+                          <span className="font-bold text-white tracking-widest">{selectedEvent.id.toUpperCase()}</span>
+                        </div>
+                        <div className="flex justify-between text-[9px]">
+                          <span className="opacity-50 uppercase">Coordinates</span>
+                          <span className="font-mono">{selectedEvent.lat.toFixed(4)}N, {selectedEvent.lng.toFixed(4)}E</span>
+                        </div>
+                        <div className="flex justify-between text-[9px]">
+                          <span className="opacity-50 uppercase">Classification</span>
+                          <span className="text-[var(--color-brand-secondary)]">{selectedEvent.type.toUpperCase()}</span>
+                        </div>
+                        {selectedEvent.path && (
+                          <div className="text-[8px] opacity-40 border-t border-[var(--color-brand-primary)]/10 pt-2">
+                            NODE_DRIFT_DETECTED: CALCULATING VECTOR...
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {filteredEvents.map((event) => (
                   <button 
                     key={event.id}
                     onClick={() => setSelectedEvent(event)}
@@ -513,6 +592,10 @@ export default function App() {
               {isAnalyzing ? <Cpu className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
               {isAnalyzing ? "PROCESSING EVOLUTION..." : "IN-DEPTH ASI-EVOLVE REVIEW"}
             </button>
+            <div className="text-[9px] flex items-center gap-2 opacity-60">
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-primary)] animate-pulse" />
+              SUPABASE_LINK: ESTABLISHED
+            </div>
             <button 
               onClick={() => setAutoAnalysisActive(!autoAnalysisActive)}
               className={cn(

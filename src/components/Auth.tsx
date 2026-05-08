@@ -25,31 +25,32 @@ export default function Auth({ onSuccess }: AuthProps) {
     }, 5000);
 
     try {
-      // 1. Establish anonymous session FIRST for RLS/Auth tracking
-      const { error: authError } = await supabase.auth.signInAnonymously();
-      if (authError) {
-        console.warn("Anonymous auth failed:", authError);
-      }
+      // 1. Establish anonymous session
+      await supabase.auth.signInAnonymously();
 
       // 2. Record data in Supabase table
       const { error: insertError } = await supabase.from('operators').insert([{ name, email }]);
+      
       if (insertError) {
         console.error("Supabase insert failed:", insertError);
-        // We log it but don't strictly block unless we want to ensure sync
-        // setError(`DATABASE_SYNC_ERROR: ${insertError.message}`);
-      } else {
-        console.log("Operator record saved successfully");
+        setError(`DB_ERROR: ${insertError.message}. Ensure table 'operators' exists with 'name' and 'email' columns.`);
+        setLoading(false);
+        clearTimeout(safetyTimeout);
+        return;
       }
-
+      
+      console.log("Operator record saved successfully");
+      setError("SESSION_INITIALIZED: DATABASE_SYNC_SUCCESS."); // Use error state as a status message
+      await new Promise(r => setTimeout(r, 1500));
+      
       clearTimeout(safetyTimeout);
       setLoading(false);
       onSuccess();
     } catch (err: any) {
       console.error("Initialization error:", err);
-      // Fallback: Proceed to demo anyway
-      clearTimeout(safetyTimeout);
+      setError(`FATAL_ERROR: ${err.message}`);
       setLoading(false);
-      onSuccess();
+      clearTimeout(safetyTimeout);
     }
   };
 
