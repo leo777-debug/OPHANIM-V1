@@ -41,9 +41,7 @@ export default function Auth({ onSuccess }: AuthProps) {
         throw new Error("SUPABASE_CREDENTIALS_MISSING: You must set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Secrets panel.");
       }
 
-      // 1. Establish anonymous session
-      const { error: authError } = await supabase.auth.signInAnonymously();
-      if (authError) throw authError;
+      
 
       // 2. Record data in Supabase table
       const { error: insertError } = await supabase.from('operators').insert([{ name, email }]);
