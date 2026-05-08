@@ -34,6 +34,21 @@ export default function Auth({ onSuccess }: AuthProps) {
     }, 5000);
 
     try {
+      // 0. Server-side Rate Limiting Check
+      const verifyResp = await fetch(`${window.location.origin}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email })
+      });
+
+      if (verifyResp.status === 429) {
+        throw new Error("AUTH_THROTTLED: Please try again later.");
+      }
+      if (!verifyResp.ok) {
+        const errData = await verifyResp.json();
+        throw new Error(errData.error || "IDENTIFICATION_FAILURE");
+      }
+
       // 1. Check if we are using placeholder credentials
       const isPlaceholder = supabase.auth.getSession ? false : true; 
       // Actually the client is initialized. Let's check the URL.
