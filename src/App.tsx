@@ -22,13 +22,17 @@ import { IntelligenceEvent, AnalysisResult, CognitionLesson, NewsItem } from "./
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+import Auth from "./components/Auth";
+import { supabase } from "./lib/supabase";
+
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || "";
+const API_BASE = (import.meta as any).env.VITE_API_URL || "";
 
 export default function App() {
+  const [session, setSession] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"streams" | "news" | "cognition">("streams");
   const [events, setEvents] = useState<IntelligenceEvent[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -36,7 +40,9 @@ export default function App() {
   const [selectedEvent, setSelectedEvent] = useState<IntelligenceEvent | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [logs, setLogs] = useState<string[]>(["OPHANIM-ATLAS SYSTEM INITIALIZED"]);
+  const [autoAnalysisActive, setAutoAnalysisActive] = useState(true);
+  const [alerts, setAlerts] = useState<{id: string, msg: string, score: number}[]>([]);
+  const [logs, setLogs] = useState<string[]>(["OPHANIM-V1 SYSTEM INITIALIZED"]);
 
   const addLog = (msg: string) => {
     setLogs(prev => [msg, ...prev].slice(0, 50));
@@ -131,10 +137,12 @@ export default function App() {
 
   const [analysisStatus, setAnalysisStatus] = useState<string>("");
 
-  const handleAnalyze = async () => {
-    setIsAnalyzing(true);
-    setAnalysis(null);
-    setSelectedEvent(null);
+  const handleAnalyze = async (isManual: boolean = true) => {
+    setIsAnalyzing(isManual);
+    if (isManual) {
+      setAnalysis(null);
+      setSelectedEvent(null);
+    }
     
     const steps = [
       "INITIALIZING ASI-EVOLVE RESEARCHER AGENT...",
@@ -145,10 +153,14 @@ export default function App() {
       "CRYSTALLIZING PREDICTIVE OUTCOME..."
     ];
 
-    for (const step of steps) {
-      setAnalysisStatus(step);
-      addLog(step);
-      await new Promise(r => setTimeout(r, 800)); // Simulate agent work
+    if (isManual) {
+      for (const step of steps) {
+        setAnalysisStatus(step);
+        addLog(step);
+        await new Promise(r => setTimeout(r, 800)); // Simulate agent work
+      }
+    } else {
+      addLog("ASI-EVOLVE: BACKGROUND RECONNAISSANCE COMMENCED.");
     }
     
     try {
@@ -170,7 +182,17 @@ export default function App() {
         const cogData = await resCog.json();
         setCognition(cogData);
       }
-      addLog("ANALYSIS COMPLETE: THREAT MAPPED.");
+
+      if (!isManual && result.threat_score > 60) {
+        setAlerts(prev => [{
+          id: Date.now().toString(),
+          msg: result.summary,
+          score: result.threat_score
+        }, ...prev].slice(0, 5));
+        addLog(`!!! HIGH THREAT ALERT DETECTED [${result.threat_score}%] !!!`);
+      }
+
+      addLog(isManual ? "ANALYSIS COMPLETE: THREAT MAPPED." : "BACKGROUND SCAN COMPLETE.");
     } catch (err) {
       addLog("AI ANALYSIS ERROR: CONNECTION INTERRUPTED.");
     } finally {
@@ -180,10 +202,42 @@ export default function App() {
   };
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
     fetchIntel();
     const interval = setInterval(fetchIntel, 60000); // Poll every minute
     return () => clearInterval(interval);
-  }, []);
+  }, [session]);
+
+  // Automated Analysis Loop
+  useEffect(() => {
+    if (!session || !autoAnalysisActive) return;
+
+    const interval = setInterval(() => {
+      if (!isAnalyzing && events.length > 0) {
+        handleAnalyze(false);
+      }
+    }, 300000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [session, autoAnalysisActive, isAnalyzing, events.length]);
+
+  if (!session) {
+    return <Auth onSuccess={() => {}} />;
+  }
 
   return (
     <div className="flex h-screen w-screen bg-black text-[#00ff41] font-mono select-none overflow-hidden text-sm uppercase">
@@ -195,7 +249,7 @@ export default function App() {
         <div className="p-4 border-b hud-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-[var(--color-brand-primary)]" />
-            <h1 className="font-bold tracking-tighter text-lg leading-none">OPH-V1 ATLAS</h1>
+            <h1 className="font-bold tracking-tighter text-lg leading-none">OPHANIM-V1</h1>
           </div>
           <div className="text-[10px] bg-[var(--color-brand-primary)] text-black px-1 font-bold">
             LIVE
@@ -312,6 +366,33 @@ export default function App() {
         </div>
       </aside>
 
+      {/* Notification Area */}
+      <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 w-80 pointer-events-none">
+        <AnimatePresence>
+          {alerts.map(alert => (
+            <motion.div
+              key={alert.id}
+              initial={{ x: 100, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 100, opacity: 0 }}
+              className="hud-bg border-2 border-red-500 p-4 shadow-[0_0_20px_rgba(239,68,68,0.2)] pointer-events-auto cursor-pointer"
+              onClick={() => {
+                setAlerts(prev => prev.filter(a => a.id !== alert.id));
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black text-red-500 tracking-widest animate-pulse flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> HIGH_THREAT_DETECTED
+                </span>
+                <span className="text-xl font-black text-red-500">{alert.score}%</span>
+              </div>
+              <p className="text-[10px] leading-tight opacity-90">{alert.msg}</p>
+              <div className="mt-2 text-[8px] opacity-40 uppercase">Click to dismiss</div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       {/* Main Map View */}
       <main className="flex-1 relative flex flex-col shrink min-w-0">
         <div className="flex-1 min-h-0">
@@ -331,7 +412,16 @@ export default function App() {
               className="flex items-center gap-2 bg-[var(--color-brand-primary)] text-black px-4 py-1 font-bold hover:bg-white hover:text-black transition-colors disabled:opacity-50"
             >
               {isAnalyzing ? <Cpu className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
-              {isAnalyzing ? "PROCESSING EVOLUTION..." : "EXECUTE ASI-EVOLVE ANALYTICS"}
+              {isAnalyzing ? "PROCESSING EVOLUTION..." : "IN-DEPTH ASI-EVOLVE REVIEW"}
+            </button>
+            <button 
+              onClick={() => setAutoAnalysisActive(!autoAnalysisActive)}
+              className={cn(
+                "text-[10px] px-2 py-1 border transition-colors",
+                autoAnalysisActive ? "border-[var(--color-brand-primary)] text-[var(--color-brand-primary)]" : "border-gray-600 text-gray-600"
+              )}
+            >
+              AUTO-MONITOR: {autoAnalysisActive ? "ON" : "OFF"}
             </button>
             <div className="text-[10px] flex items-center gap-1">
               <AlertTriangle className="w-3 h-3 text-yellow-500" />
