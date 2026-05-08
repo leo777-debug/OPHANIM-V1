@@ -121,30 +121,46 @@ export default function App() {
       // Add Satellite Tracking (Mocked for MENA area)
       const sats = ["STARLINK-1024", "GPS-BIIA-10", "ISS-LOW-ORBIT", "INTELSAT-34"];
       sats.forEach((name, i) => {
+        const baseLat = 25.0 + (Math.random() - 0.5) * 15;
+        const baseLng = 45.0 + (Math.random() - 0.5) * 15;
         scrapedEvents.push({
           id: "sat-" + i,
           type: "satellite",
-          lat: 25.0 + (Math.random() - 0.5) * 15,
-          lng: 45.0 + (Math.random() - 0.5) * 15,
+          lat: baseLat,
+          lng: baseLng,
           label: name,
           intensity: 0.1,
           details: `Orbital Node ${name} detected. Velocity: 7.6km/s. Signal: Stable.`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          path: [
+            [baseLat - 5, baseLng - 10],
+            [baseLat - 2, baseLng - 4],
+            [baseLat, baseLng],
+            [baseLat + 2, baseLng + 4],
+            [baseLat + 5, baseLng + 10]
+          ]
         });
       });
 
       // Add Marine Traffic (Mocked for MENA area)
       const ships = ["EVER-GIVEN-RELIEF", "COSCO-SHIPPING-PEARL", "MSC-ISABELLA", "MAERSK-MC-KINNEY"];
       ships.forEach((name, i) => {
+        const baseLat = 15.0 + (Math.random() - 0.5) * 10;
+        const baseLng = 50.0 + (Math.random() - 0.5) * 10;
         scrapedEvents.push({
           id: "ship-" + i,
           type: "vessel",
-          lat: 15.0 + (Math.random() - 0.5) * 10,
-          lng: 50.0 + (Math.random() - 0.5) * 10,
+          lat: baseLat,
+          lng: baseLng,
           label: name,
           intensity: 0.3,
           details: `Marine vessel ${name} at cruise speed 18 knots. Identity: Verified Merchant.`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          path: [
+            [baseLat - 2, baseLng - 2],
+            [baseLat - 1, baseLng - 1],
+            [baseLat, baseLng]
+          ]
         });
       });
 

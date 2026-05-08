@@ -1,5 +1,5 @@
 import React from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { RefreshCw, Plane, Ship, Orbit, Radio } from "lucide-react";
@@ -86,6 +86,19 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
                 </Popup>
               </Marker>
               
+              {/* Route visualization */}
+              {event.path && (
+                <Polyline 
+                  positions={event.path}
+                  pathOptions={{
+                    color: color,
+                    weight: 1,
+                    opacity: 0.4,
+                    dashArray: "3, 6"
+                  }}
+                />
+              )}
+
               {/* Threat radius visualization */}
               {event.intensity > 0.6 && (
                 <Circle

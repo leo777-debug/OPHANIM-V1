@@ -13,38 +13,44 @@ export default function Auth({ onSuccess }: AuthProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // Fire and forget Supabase tracking
-    (async () => {
-      try {
-        const { error: insertError } = await supabase.from('operators').insert([{ name, email }]);
-        if (insertError) {
-          console.error("Supabase insert error:", insertError);
-        } else {
-          console.log("Operator record saved successfully");
-        }
-      } catch (e) {
-        console.warn("Supabase unexpected error:", e);
-      }
-    })();
-
-    // Attempt anonymous sign in but don't block
-    const handleProceed = () => {
+    // Safety transition in case of total failure
+    const safetyTimeout = setTimeout(() => {
       setLoading(false);
       onSuccess();
-    };
+    }, 5000);
 
-    // Safety timeout to ensure transition
-    const timeout = setTimeout(handleProceed, 3000);
+    try {
+      // 1. Establish anonymous session FIRST for RLS/Auth tracking
+      const { error: authError } = await supabase.auth.signInAnonymously();
+      if (authError) {
+        console.warn("Anonymous auth failed:", authError);
+      }
 
-    supabase.auth.signInAnonymously().finally(() => {
-      clearTimeout(timeout);
-      handleProceed();
-    });
+      // 2. Record data in Supabase table
+      const { error: insertError } = await supabase.from('operators').insert([{ name, email }]);
+      if (insertError) {
+        console.error("Supabase insert failed:", insertError);
+        // We log it but don't strictly block unless we want to ensure sync
+        // setError(`DATABASE_SYNC_ERROR: ${insertError.message}`);
+      } else {
+        console.log("Operator record saved successfully");
+      }
+
+      clearTimeout(safetyTimeout);
+      setLoading(false);
+      onSuccess();
+    } catch (err: any) {
+      console.error("Initialization error:", err);
+      // Fallback: Proceed to demo anyway
+      clearTimeout(safetyTimeout);
+      setLoading(false);
+      onSuccess();
+    }
   };
 
   return (

@@ -7,6 +7,7 @@ export interface IntelligenceEvent {
   intensity: number; // 0-1
   details: string;
   timestamp: string;
+  path?: [number, number][];
 }
 
 export interface AnalysisResult {
