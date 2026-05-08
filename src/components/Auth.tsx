@@ -25,33 +25,57 @@ export default function Auth({ onSuccess }: AuthProps) {
     }, 5000);
 
     try {
+      // 1. Check if we are using placeholder credentials
+      const isPlaceholder = supabase.auth.getSession ? false : true; 
+      // Actually the client is initialized. Let's check the URL.
+      if ((supabase as any).supabaseUrl?.includes('placeholder')) {
+        throw new Error("SUPABASE_CREDENTIALS_MISSING: You must set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Secrets panel.");
+      }
+
       // 1. Establish anonymous session
-      await supabase.auth.signInAnonymously();
+      const { error: authError } = await supabase.auth.signInAnonymously();
+      if (authError) throw authError;
 
       // 2. Record data in Supabase table
       const { error: insertError } = await supabase.from('operators').insert([{ name, email }]);
       
       if (insertError) {
         console.error("Supabase insert failed:", insertError);
-        setError(`DB_ERROR: ${insertError.message}. Ensure table 'operators' exists with 'name' and 'email' columns.`);
+        setError(`DATABASE_ERROR: ${insertError.message}. Make sure the 'operators' table exists with 'name' and 'email' columns and RLS allows inserts.`);
         setLoading(false);
         clearTimeout(safetyTimeout);
         return;
       }
       
       console.log("Operator record saved successfully");
-      setError("SESSION_INITIALIZED: DATABASE_SYNC_SUCCESS."); // Use error state as a status message
-      await new Promise(r => setTimeout(r, 1500));
+      setError("SESSION_INITIALIZED: DATABASE_SYNC_SUCCESS.");
+      await new Promise(r => setTimeout(r, 1000));
       
       clearTimeout(safetyTimeout);
       setLoading(false);
       onSuccess();
     } catch (err: any) {
       console.error("Initialization error:", err);
-      setError(`FATAL_ERROR: ${err.message}`);
+      // Give more specific feedback for "Failed to fetch"
+      const message = err.message === 'Failed to fetch' 
+        ? "CONNECTION_FAILURE: Could not reach Supabase edge. Check if your project is paused or secrets are correctly set."
+        : err.message;
+      
+      setError(`FATAL_ERROR: ${message}`);
       setLoading(false);
-      clearTimeout(safetyTimeout);
+      
+      // Add a small delay then allow manual override if they just want to see the demo
+      setTimeout(() => {
+        if (loading) {
+           setError(`FATAL_ERROR: ${message}. Click again to bypass sync.`);
+        }
+      }, 2000);
     }
+  };
+
+  const handleBypass = () => {
+    setLoading(false);
+    onSuccess();
   };
 
   return (
@@ -127,8 +151,17 @@ export default function Auth({ onSuccess }: AuthProps) {
             </div>
 
             {error && (
-              <div className="text-red-500 text-[10px] uppercase font-bold animate-pulse">
-                ERR: {error}
+              <div className="space-y-2">
+                <div className="text-red-500 text-[10px] uppercase font-bold border border-red-500/30 p-2 bg-red-500/5">
+                  SIGNAL_INTERRUPT: {error}
+                </div>
+                <button 
+                  type="button"
+                  onClick={handleBypass}
+                  className="w-full text-[9px] text-[#00ff41]/50 hover:text-[#00ff41] underline cursor-pointer"
+                >
+                  [OVERRIDE_DB_SYNC_AND_PROCEED_TO_DEMO]
+                </button>
               </div>
             )}
 

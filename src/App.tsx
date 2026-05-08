@@ -25,6 +25,7 @@ import { IntelligenceEvent, AnalysisResult, CognitionLesson, NewsItem } from "./
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+import Papa from "papaparse";
 import Auth from "./components/Auth";
 import { supabase } from "./lib/supabase";
 
@@ -44,7 +45,7 @@ export type MapLayers = {
 export default function App() {
   const [session, setSession] = useState<any>(null);
   const [demoAccess, setDemoAccess] = useState(false);
-  const [activeTab, setActiveTab] = useState<"streams" | "news" | "cognition">("streams");
+  const [activeTab, setActiveTab] = useState<"streams" | "news" | "cognition" | "operators">("streams");
   const [layers, setLayers] = useState<MapLayers>({
     aircraft: true,
     vessel: true,
@@ -54,10 +55,12 @@ export default function App() {
   const [events, setEvents] = useState<IntelligenceEvent[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [cognition, setCognition] = useState<CognitionLesson[]>([]);
+  const [operators, setOperators] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<IntelligenceEvent | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [autoAnalysisActive, setAutoAnalysisActive] = useState(true);
+  const [isImporting, setIsImporting] = useState(false);
   const [alerts, setAlerts] = useState<{id: string, msg: string, score: number}[]>([]);
   const [logs, setLogs] = useState<string[]>(["OPHANIM-V1 SYSTEM INITIALIZED"]);
 
@@ -65,8 +68,61 @@ export default function App() {
     setLogs(prev => [msg, ...prev].slice(0, 50));
   };
 
+  const handleCSVImport = (file: File) => {
+    setIsImporting(true);
+    addLog(`INITIATING_CSV_PARSING: ${file.name}`);
+    
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const importedEvents: IntelligenceEvent[] = results.data.map((row: any, i: number) => ({
+          id: row.id || `csv-${Date.now()}-${i}`,
+          type: (['vessel', 'aircraft', 'conflict', 'news', 'satellite'].includes(row.type) ? row.type : 'news') as any,
+          lat: parseFloat(row.lat),
+          lng: parseFloat(row.lng),
+          label: row.label || "IDENT_UNKNOWN",
+          intensity: parseFloat(row.intensity) || 0.5,
+          details: row.details || "External data import.",
+          timestamp: row.timestamp || new Date().toISOString(),
+        })).filter(e => !isNaN(e.lat) && !isNaN(e.lng));
+
+        if (importedEvents.length > 0) {
+          setEvents(prev => [...prev, ...importedEvents]);
+          addLog(`DATA_IMPORT_SUCCESS: ${importedEvents.length} NODES MERGED.`);
+        } else {
+          addLog("IMPORT_ERROR: No valid coordinates found in CSV.");
+        }
+        setIsImporting(false);
+      },
+      error: (error) => {
+        addLog(`IMPORT_FATAL: ${error.message}`);
+        setIsImporting(false);
+      }
+    });
+  };
+
+  const fetchOperators = async () => {
+    try {
+      const { data, error } = await supabase.from('operators').select('*').order('created_at', { ascending: false });
+      if (error) {
+        if (error.message === 'Failed to fetch') {
+           addLog("DB_ACCESS_DENIED: SUPABASE_CONNECTION_ERROR.");
+        } else {
+           addLog(`DB_QUERY_ERROR: ${error.message}`);
+        }
+        return;
+      }
+      setOperators(data || []);
+      addLog(`OPERATOR_REGISTRY_SYNCED: ${data?.length || 0} IDENTIFIED.`);
+    } catch (err) {
+      console.error("Op fetch error:", err);
+    }
+  };
+
   const fetchIntel = async () => {
     addLog("POLLING DATA STREAMS...");
+    fetchOperators();
     try {
       const newsPromise = fetch(`${API_BASE}/api/news`).then(r => r.json());
       const cogPromise = fetch(`${API_BASE}/api/cognition`).then(r => r.json());
@@ -335,8 +391,21 @@ export default function App() {
   useEffect(() => {
     if (!session && !demoAccess) return;
     fetchIntel();
+    
+    // Subscribe to realtime operator registrations
+    const opsChannel = supabase
+      .channel('operators-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'operators' }, (payload) => {
+        setOperators(prev => [payload.new, ...prev]);
+        addLog(`OPERATOR_REGISTERED: ${payload.new.email}`);
+      })
+      .subscribe();
+
     const interval = setInterval(fetchIntel, 60000); // Poll every minute
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(opsChannel);
+    };
   }, [session, demoAccess]);
 
   // Automated Analysis Loop
@@ -389,9 +458,15 @@ export default function App() {
           </button>
           <button 
             onClick={() => setActiveTab("cognition")}
-            className={cn("flex-1 flex items-center justify-center gap-2", activeTab === "cognition" && "bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]")}
+            className={cn("flex-1 flex items-center justify-center gap-2 border-r hud-border", activeTab === "cognition" && "bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]")}
           >
             <BrainCircuit className="w-3 h-3" /> COG
+          </button>
+          <button 
+            onClick={() => setActiveTab("operators")}
+            className={cn("flex-1 flex items-center justify-center gap-2", activeTab === "operators" && "bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]")}
+          >
+            <Shield className="w-3 h-3" /> OPS
           </button>
         </div>
 
@@ -431,6 +506,24 @@ export default function App() {
                   </button>
                 </div>
 
+                <div className="mb-4 flex items-center gap-2">
+                  <button 
+                    onClick={() => fetchIntel()}
+                    className="flex-1 flex items-center justify-center gap-2 p-2 border hud-border hud-bg hover:bg-[var(--color-brand-primary)]/20 text-[9px] transition-all"
+                  >
+                    <RefreshCw className={cn("w-3 h-3", isAnalyzing && "animate-spin")} /> REFRESH_FUSION
+                  </button>
+                  <label className="flex-1 flex items-center justify-center gap-2 p-2 border hud-border hud-bg hover:bg-[var(--color-brand-primary)]/20 text-[9px] transition-all cursor-pointer">
+                    <Database className={cn("w-3 h-3", isImporting && "animate-bounce")} /> IMPORT_CSV
+                    <input 
+                      type="file" 
+                      accept=".csv" 
+                      className="hidden" 
+                      onChange={(e) => e.target.files?.[0] && handleCSVImport(e.target.files[0])}
+                    />
+                  </label>
+                </div>
+
                   {/* Tactical Readout Sidebar (Only if selected) */}
                   {selectedEvent && (
                     <motion.div 
@@ -462,6 +555,15 @@ export default function App() {
                         )}
                       </div>
                     </motion.div>
+                  )}
+
+                  {filteredEvents.length === 0 && (
+                    <div className="p-4 border hud-border border-dashed opacity-30 text-center text-[10px] flex flex-col gap-2">
+                      <div>NO_TARGETS_IN_VIEW // STREAMS_SILENT</div>
+                      <div className="text-[8px] border-t hud-border pt-2">
+                        EXPECTED_CSV_SCHEMA: id, type, lat, lng, label, intensity, details
+                      </div>
+                    </div>
                   )}
 
                   {filteredEvents.map((event) => (
@@ -515,6 +617,33 @@ export default function App() {
                     <div className="text-[10px] font-bold text-[var(--color-brand-primary)] mb-1">{lesson.title}</div>
                     <div className="text-[10px] leading-relaxed opacity-80">{lesson.lesson}</div>
                     <div className="mt-2 text-[8px] opacity-40 tracking-widest">{lesson.context.toUpperCase()}</div>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+            {activeTab === "operators" && (
+              <motion.div 
+                key="operators"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="flex flex-col gap-3"
+              >
+                <div className="text-[10px] opacity-40 mb-2">ACTIVE_OPERATOR_REGISTRY</div>
+                {operators.length === 0 ? (
+                  <div className="p-4 border hud-border border-dashed opacity-30 text-center text-[10px]">
+                    NO_OPERATORS_IDENTIFIED // CHECK_DB_CONNECTION
+                  </div>
+                ) : operators.map((op, i) => (
+                  <div key={i} className="p-2 border hud-border hud-bg flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-[var(--color-brand-primary)]/20 flex items-center justify-center shrink-0">
+                      <Shield className="w-4 h-4 text-[var(--color-brand-primary)]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] font-bold truncate">{op.name}</div>
+                      <div className="text-[8px] opacity-50 truncate">{op.email}</div>
+                    </div>
+                    <div className="text-[7px] opacity-30 whitespace-nowrap">
+                      {op.created_at ? new Date(op.created_at).toLocaleTimeString() : 'RECENT'}
+                    </div>
                   </div>
                 ))}
               </motion.div>
