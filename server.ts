@@ -3,46 +3,18 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs/promises";
 import cors from "cors";
-import helmet from "helmet";
-import { z } from "zod";
 import { fileURLToPath } from "url";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Input Schemas
-const IntelligenceDataSchema = z.array(z.object({
-  id: z.string(),
-  type: z.enum(['vessel', 'aircraft', 'conflict', 'news', 'satellite']),
-  lat: z.number(),
-  lng: z.number(),
-  label: z.string(),
-  intensity: z.number(),
-  details: z.string(),
-  timestamp: z.string()
-})).or(z.object({
-  id: z.string(),
-  type: z.enum(['vessel', 'aircraft', 'conflict', 'news', 'satellite']),
-  lat: z.number(),
-  lng: z.number(),
-  label: z.string(),
-  intensity: z.number(),
-  details: z.string(),
-  timestamp: z.string()
-}));
-
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
 
-  // Security Headers
-  app.use(helmet({
-    contentSecurityPolicy: false, // Disable for Vite dev
-  }));
-  
   app.use(cors());
-  app.use(express.json({ limit: "50kb" }));
+  app.use(express.json());
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -116,11 +88,7 @@ Output in JSON with:
 
   // ASI-Evolve Simulation Endpoint
   app.post("/api/analyze", async (req, res) => {
-    const validated = IntelligenceDataSchema.safeParse(req.body.intelligenceData);
-    if (!validated.success) {
-      return res.status(400).json({ error: "INVALID_PAYLOAD", details: validated.error.format() });
-    }
-    const intelligenceData = validated.data;
+    const { intelligenceData } = req.body;
     
     try {
       // 1. LEARN: Fetch context from Cognition Store

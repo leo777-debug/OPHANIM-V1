@@ -26,11 +26,11 @@ export default function Auth({ onSuccess }: AuthProps) {
     }, 5000);
 
     try {
-      // 1. Check if we are using placeholder or missing credentials
-      const sUrl = (supabase as any).supabaseUrl;
-      const sKey = (supabase as any).supabaseKey;
-      if (!sUrl || !sKey || sUrl.includes('placeholder')) {
-        throw new Error("SUPABASE_CREDENTIALS_MISSING: Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment variables/secrets.");
+      // 1. Check if we are using placeholder credentials
+      const isPlaceholder = supabase.auth.getSession ? false : true; 
+      // Actually the client is initialized. Let's check the URL.
+      if ((supabase as any).supabaseUrl?.includes('placeholder')) {
+        throw new Error("SUPABASE_CREDENTIALS_MISSING: You must set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Secrets panel.");
       }
 
       // 1. Establish anonymous session
@@ -121,10 +121,10 @@ export default function Auth({ onSuccess }: AuthProps) {
           
           <div className="mb-6">
             <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
-               <UserPlus className="w-5 h-5" /> INITIALIZE_USER
+               <UserPlus className="w-5 h-5" /> INITIALIZE_OPERATOR
             </h2>
             <p className="text-[10px] text-[#00ff41]/60 leading-tight uppercase">
-              Enter your name and email to access the system
+              Give email and name and signup to try demo
             </p>
           </div>
 
