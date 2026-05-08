@@ -109,7 +109,7 @@ export default function App() {
         if (error.message === 'Failed to fetch') {
            addLog("DB_ACCESS_DENIED: SUPABASE_CONNECTION_ERROR.");
         } else {
-           addLog(`DB_QUERY_ERROR: ${error.message}`);
+           addLog(`DB_QUERY_ERROR: ${error.message} (Is 'operators' table created?)`);
         }
         return;
       }
@@ -117,6 +117,7 @@ export default function App() {
       addLog(`OPERATOR_REGISTRY_SYNCED: ${data?.length || 0} IDENTIFIED.`);
     } catch (err) {
       console.error("Op fetch error:", err);
+      addLog("DB_FATAL: UNEXPECTED_ERROR_IN_FETCH.");
     }
   };
 
@@ -124,14 +125,20 @@ export default function App() {
     addLog("POLLING DATA STREAMS...");
     fetchOperators();
     try {
-      const newsPromise = fetch(`${API_BASE}/api/news`).then(r => r.json());
-      const cogPromise = fetch(`${API_BASE}/api/cognition`).then(r => r.json());
-      const nasaPromise = fetch(`${API_BASE}/api/nasa`).then(r => r.json());
-      const aviaPromise = fetch(`${API_BASE}/api/aviation`).then(r => r.json());
-
-      const [newsData, cogData, nasaData, aviaData] = await Promise.all([
-        newsPromise, cogPromise, nasaPromise, aviaPromise
+      const responses = await Promise.all([
+        fetch(`${API_BASE}/api/news`),
+        fetch(`${API_BASE}/api/cognition`),
+        fetch(`${API_BASE}/api/nasa`),
+        fetch(`${API_BASE}/api/aviation`)
       ]);
+
+      const rateLimited = responses.find(r => r.status === 429);
+      if (rateLimited) {
+        addLog("SIGNAL_INTERRUPT: FUSION_THROTTLED. COOLING_DOWN.");
+        return;
+      }
+
+      const [newsData, cogData, nasaData, aviaData] = await Promise.all(responses.map(r => r.json()));
 
       if (newsData.articles) setNews(newsData.articles);
       setCognition(cogData);
@@ -342,6 +349,15 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ intelligenceData: selectedEvent || events })
       });
+
+      if (response.status === 429) {
+        const errorData = await response.json();
+        addLog(`SIGNAL_INTERRUPT: ${errorData.error || "THROTTLED"}`);
+        setIsAnalyzing(false);
+        setAnalysisStatus("");
+        return;
+      }
+
       const result = await response.json();
       
       setAnalysis({
@@ -466,7 +482,7 @@ export default function App() {
             onClick={() => setActiveTab("operators")}
             className={cn("flex-1 flex items-center justify-center gap-2", activeTab === "operators" && "bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]")}
           >
-            <Shield className="w-3 h-3" /> OPS
+            <Shield className={cn("w-3 h-3", operators.length > 0 && "animate-pulse")} /> OPS {operators.length > 0 && `(${operators.length})`}
           </button>
         </div>
 
@@ -523,6 +539,19 @@ export default function App() {
                     />
                   </label>
                 </div>
+
+                {operators.length > 0 && (
+                  <div className="mb-4 p-2 border-l-2 border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)]/5">
+                    <div className="text-[8px] opacity-50 mb-1">LATEST_JOINED_OPERATORS:</div>
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                      {operators.slice(0, 3).map((op, i) => (
+                        <div key={i} className="text-[9px] whitespace-nowrap bg-black/40 px-1 border border-[var(--color-brand-primary)]/20">
+                           {op.email.split('@')[0]}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                   {/* Tactical Readout Sidebar (Only if selected) */}
                   {selectedEvent && (
@@ -627,21 +656,41 @@ export default function App() {
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="flex flex-col gap-3"
               >
-                <div className="text-[10px] opacity-40 mb-2">ACTIVE_OPERATOR_REGISTRY</div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[10px] opacity-40">ACTIVE_OPERATOR_REGISTRY</div>
+                  <button 
+                    onClick={fetchOperators}
+                    className="text-[9px] hover:text-[var(--color-brand-primary)] flex items-center gap-1 opacity-60 hover:opacity-100"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5" /> RE-SYNC
+                  </button>
+                </div>
+                
                 {operators.length === 0 ? (
-                  <div className="p-4 border hud-border border-dashed opacity-30 text-center text-[10px]">
-                    NO_OPERATORS_IDENTIFIED // CHECK_DB_CONNECTION
+                  <div className="p-6 border hud-border border-dashed opacity-40 text-center text-[10px] space-y-4">
+                    <Database className="w-8 h-8 mx-auto opacity-20" />
+                    <div>
+                      NO_OPERATORS_IDENTIFIED // CHECK_DB_CONNECTION
+                      <p className="mt-2 text-[8px] leading-tight">
+                        ENSURE 'operators' TABLE EXISTS IN SUPABASE<br/>
+                        COLUMNS: id, name, email, created_at
+                      </p>
+                    </div>
+                    <div className="text-red-500 font-bold border border-red-500/20 p-2 bg-red-500/5">
+                      DB_STATE: {supabase.supabaseUrl.includes('placeholder') ? "MODE_DEMO_BYPASS" : "CONNECTED"}
+                    </div>
                   </div>
                 ) : operators.map((op, i) => (
-                  <div key={i} className="p-2 border hud-border hud-bg flex items-center gap-3">
+                  <div key={i} className="p-2 border hud-border hud-bg flex items-center gap-3 relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-[2px] h-full bg-[var(--color-brand-primary)] opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="w-8 h-8 rounded bg-[var(--color-brand-primary)]/20 flex items-center justify-center shrink-0">
                       <Shield className="w-4 h-4 text-[var(--color-brand-primary)]" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-[10px] font-bold truncate">{op.name}</div>
-                      <div className="text-[8px] opacity-50 truncate">{op.email}</div>
+                      <div className="text-[10px] font-bold truncate">{op.name || "UNKNOWN_OPERATOR"}</div>
+                      <div className="text-[8px] opacity-60 truncate">{op.email}</div>
                     </div>
-                    <div className="text-[7px] opacity-30 whitespace-nowrap">
+                    <div className="text-[7px] opacity-30 whitespace-nowrap bg-black px-1">
                       {op.created_at ? new Date(op.created_at).toLocaleTimeString() : 'RECENT'}
                     </div>
                   </div>

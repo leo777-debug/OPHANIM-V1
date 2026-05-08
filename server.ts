@@ -1,4 +1,5 @@
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs/promises";
@@ -15,6 +16,27 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json());
+
+  // Global rate limiter for intelligence fusion
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per window
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "TOO_MANY_FUSION_REQUESTS: COOLING_DOWN" }
+  });
+
+  // Strict limiter for AI Analysis (expensive)
+  const analysisLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 20, // Limit each IP to 20 analyses per hour
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "EVOLUTION_THROTTLED: COGNITIVE_RECOVERY_REQUIRED" }
+  });
+
+  app.use("/api/", apiLimiter);
+  app.use("/api/analyze", analysisLimiter);
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });

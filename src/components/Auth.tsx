@@ -15,6 +15,15 @@ export default function Auth({ onSuccess }: AuthProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 0. Client-side Rate Limiting (Cooldown)
+    const lastReg = localStorage.getItem("ophanim_registration_ts");
+    const now = Date.now();
+    if (lastReg && now - parseInt(lastReg) < 30000) {
+      setError("RATE_LIMIT_EXCEEDED: Cooldown active. Please wait 30s.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -28,7 +37,9 @@ export default function Auth({ onSuccess }: AuthProps) {
       // 1. Check if we are using placeholder credentials
       const isPlaceholder = supabase.auth.getSession ? false : true; 
       // Actually the client is initialized. Let's check the URL.
-     
+      if ((supabase as any).supabaseUrl?.includes('placeholder')) {
+        throw new Error("SUPABASE_CREDENTIALS_MISSING: You must set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Secrets panel.");
+      }
 
       // 1. Establish anonymous session
       const { error: authError } = await supabase.auth.signInAnonymously();
@@ -46,6 +57,7 @@ export default function Auth({ onSuccess }: AuthProps) {
       }
       
       console.log("Operator record saved successfully");
+      localStorage.setItem("ophanim_registration_ts", Date.now().toString());
       setError("SESSION_INITIALIZED: DATABASE_SYNC_SUCCESS.");
       await new Promise(r => setTimeout(r, 1000));
       
