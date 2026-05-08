@@ -13,30 +13,34 @@ export default function Auth({ onSuccess }: AuthProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    try {
-      // Save operator data to Supabase if table exists, otherwise just proceed
+    // Fire and forget Supabase tracking
+    (async () => {
       try {
         await supabase.from('operators').insert([{ name, email }]);
+        console.log("Operator record attempted");
       } catch (e) {
-        console.log("Supabase table 'operators' not found, proceeding to demo...");
+        console.warn("Supabase record failed", e);
       }
+    })();
 
-      // Anonymous login to establish a session
-      const { error: authError } = await supabase.auth.signInAnonymously();
-      if (authError) throw authError;
-      
-      onSuccess();
-    } catch (err: any) {
-      // If anonymous auth is disabled or fails, we still let them in for the demo
-      onSuccess();
-    } finally {
+    // Attempt anonymous sign in but don't block
+    const handleProceed = () => {
       setLoading(false);
-    }
+      onSuccess();
+    };
+
+    // Safety timeout to ensure transition
+    const timeout = setTimeout(handleProceed, 3000);
+
+    supabase.auth.signInAnonymously().finally(() => {
+      clearTimeout(timeout);
+      handleProceed();
+    });
   };
 
   return (

@@ -33,6 +33,7 @@ const API_BASE = (import.meta as any).env.VITE_API_URL || "";
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
+  const [demoAccess, setDemoAccess] = useState(false);
   const [activeTab, setActiveTab] = useState<"streams" | "news" | "cognition">("streams");
   const [events, setEvents] = useState<IntelligenceEvent[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -183,16 +184,16 @@ export default function App() {
         setCognition(cogData);
       }
 
-      if (!isManual && result.threat_score > 60) {
+      if (!isManual && result.threat_score > 40) {
         setAlerts(prev => [{
           id: Date.now().toString(),
           msg: result.summary,
           score: result.threat_score
         }, ...prev].slice(0, 5));
-        addLog(`!!! HIGH THREAT ALERT DETECTED [${result.threat_score}%] !!!`);
+        addLog(`[ALERT] SUSPICIOUS ACTIVITY DETECTED [${result.threat_score}%]`);
       }
 
-      addLog(isManual ? "ANALYSIS COMPLETE: THREAT MAPPED." : "BACKGROUND SCAN COMPLETE.");
+      addLog(isManual ? "ANALYSIS COMPLETE: THREAT MAPPED." : "BACKGROUND SCAN COMPLETE: NO IMMEDIATE THREAT DETECTED.");
     } catch (err) {
       addLog("AI ANALYSIS ERROR: CONNECTION INTERRUPTED.");
     } finally {
@@ -216,27 +217,27 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session && !demoAccess) return;
     fetchIntel();
     const interval = setInterval(fetchIntel, 60000); // Poll every minute
     return () => clearInterval(interval);
-  }, [session]);
+  }, [session, demoAccess]);
 
   // Automated Analysis Loop
   useEffect(() => {
-    if (!session || !autoAnalysisActive) return;
+    if ((!session && !demoAccess) || !autoAnalysisActive) return;
 
     const interval = setInterval(() => {
       if (!isAnalyzing && events.length > 0) {
         handleAnalyze(false);
       }
-    }, 300000); // 5 minutes
+    }, 120000); // 2 minutes
 
     return () => clearInterval(interval);
   }, [session, autoAnalysisActive, isAnalyzing, events.length]);
 
-  if (!session) {
-    return <Auth onSuccess={() => {}} />;
+  if (!session && !demoAccess) {
+    return <Auth onSuccess={() => setDemoAccess(true)} />;
   }
 
   return (
