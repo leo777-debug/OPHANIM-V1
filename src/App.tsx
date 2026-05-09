@@ -179,37 +179,24 @@ export default function App() {
         });
       }
 
-      // ADSB.fi real aircraft + military over MENA
-      if (aircraftData?.ac) {
-        aircraftData.ac.forEach((a: any, i: number) => {
-          if (a.lat && a.lon) {
-            const isMilitary = a.t?.includes('MIL') ||
-              a.flight?.startsWith('RCH') ||
-              a.flight?.startsWith('DUKE') ||
-              a.flight?.startsWith('FORTE') ||
-              a.flight?.startsWith('LAGR') ||
-              a.flight?.startsWith('HOMER') ||
-              a.flight?.startsWith('USAF') ||
-              a.flight?.startsWith('UAF') ||
-              a.ownOp?.toLowerCase().includes('air force') ||
-              a.ownOp?.toLowerCase().includes('military') ||
-              a.category === 'A5';
-
+      // OpenSky real aircraft over MENA
+      if (aircraftData?.states) {
+        aircraftData.states.slice(0, 30).forEach((s: any, i: number) => {
+          if (s[6] && s[5]) {
             scrapedEvents.push({
-              id: "adsb-" + (a.hex || i),
+              id: "opensky-" + i,
               type: "aircraft",
-              lat: a.lat,
-              lng: a.lon,
-              label: isMilitary ? `⚡ MIL: ${a.flight?.trim() || a.hex}` : (a.flight?.trim() || a.hex || "UNID"),
-              intensity: isMilitary ? 0.9 : 0.3,
-              details: `${isMilitary ? '⚠️ MILITARY AIRCRAFT' : 'Civil aircraft'}: ${a.flight?.trim() || 'Unknown'}. Alt: ${a.alt_baro || 'Unknown'}ft. Speed: ${a.gs || 'Unknown'}kts. Squawk: ${a.squawk || 'None'}. Type: ${a.t || 'Unknown'}.`,
+              lat: s[6],
+              lng: s[5],
+              label: (s[1]?.trim() || "UNID-" + i),
+              intensity: 0.3,
+              details: `Real aircraft: ${s[1]?.trim() || "Unknown"}. Origin: ${s[2] || "Unknown"}. Alt: ${s[7] ? Math.round(s[7]) + "m" : "Unknown"}. Speed: ${s[9] ? Math.round(s[9]) + "m/s" : "Unknown"}.`,
               timestamp: new Date().toISOString(),
-              path: [[a.lat, a.lon]]
+              path: [[s[6], s[5]]]
             });
           }
         });
-        const total = aircraftData.ac.filter((a: any) => a.lat).length;
-        addLog(`ADSB.FI: ${total} REAL AIRCRAFT TRACKED OVER MENA.`);
+        addLog(`OPENSKY: ${Math.min(aircraftData.states.length, 30)} REAL AIRCRAFT TRACKED.`);
       }
 
       // USGS Seismic — detects earthquakes + explosions + missile impacts
@@ -423,49 +410,6 @@ export default function App() {
     fetchIntel();
     const interval = setInterval(fetchIntel, 60000);
 
-    // ADSB.fi — fetch real aircraft from browser (bypasses Vercel blocking)
-    const fetchAircraft = async () => {
-      try {
-        const resp = await fetch('https://opendata.adsb.fi/api/v2/lat/25/lon/45/dist/800');
-        const data = await resp.json();
-        if (data.ac && data.ac.length > 0) {
-          const aircraft: IntelligenceEvent[] = data.ac
-            .filter((a: any) => a.lat && a.lon)
-            .map((a: any) => {
-              const isMilitary = a.t?.includes('MIL') ||
-                a.flight?.startsWith('RCH') ||
-                a.flight?.startsWith('FORTE') ||
-                a.flight?.startsWith('LAGR') ||
-                a.flight?.startsWith('HOMER') ||
-                a.flight?.startsWith('USAF') ||
-                a.squawk === '7700' ||
-                a.squawk === '7600';
-              return {
-                id: "adsb-" + a.hex,
-                type: "aircraft" as const,
-                lat: a.lat,
-                lng: a.lon,
-                label: isMilitary ? `⚡ MIL: ${a.flight?.trim() || a.hex}` : (a.flight?.trim() || a.hex || "UNID"),
-                intensity: isMilitary ? 0.9 : 0.3,
-                details: `${isMilitary ? '⚠️ MILITARY' : 'Civil'}: ${a.flight?.trim() || 'Unknown'}. Alt: ${a.alt_baro || '?'}ft. Speed: ${a.gs || '?'}kts. Type: ${a.t || '?'}.`,
-                timestamp: new Date().toISOString(),
-                path: [[a.lat, a.lon]] as [number, number][]
-              };
-            });
-          setEvents(prev => {
-            const nonAdsb = prev.filter(e => !e.id.startsWith('adsb-'));
-            return [...nonAdsb, ...aircraft];
-          });
-          addLog(`ADSB.FI: ${aircraft.length} REAL AIRCRAFT LIVE.`);
-        }
-      } catch (e) {
-        addLog("ADSB.FI: FETCH FAILED.");
-      }
-    };
-
-    fetchAircraft();
-    const aircraftInterval = setInterval(fetchAircraft, 30000);
-
     // AISStream WebSocket — real live ships over MENA
     let ws: WebSocket | null = null;
     try {
@@ -509,7 +453,6 @@ export default function App() {
 
     return () => {
       clearInterval(interval);
-      clearInterval(aircraftInterval);
       ws?.close();
     };
   }, [session, demoAccess]);
@@ -823,4 +766,6 @@ export default function App() {
     </div>
   );
 }
+
+
 
