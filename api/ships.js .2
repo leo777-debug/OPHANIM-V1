@@ -1,0 +1,12 @@
+// api/ships.js  
+export default async function handler(req, res) {
+  try {
+    // MarineTraffic free RSS feed — no key!
+    const resp = await fetch('https://www.marinetraffic.com/rss/ais_positions.xml?latitude=25&longitude=55&radius=500');
+    const text = await resp.text();
+    res.setHeader('Content-Type', 'application/xml');
+    res.send(text);
+  } catch (err) {
+    res.json({ vessels: [] });
+  }
+}
