@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -180,24 +179,37 @@ export default function App() {
         });
       }
 
-      // OpenSky real aircraft over MENA
-      if (aircraftData?.states) {
-        aircraftData.states.slice(0, 30).forEach((s: any, i: number) => {
-          if (s[6] && s[5]) {
+      // ADSB.fi real aircraft + military over MENA
+      if (aircraftData?.ac) {
+        aircraftData.ac.forEach((a: any, i: number) => {
+          if (a.lat && a.lon) {
+            const isMilitary = a.t?.includes('MIL') ||
+              a.flight?.startsWith('RCH') ||
+              a.flight?.startsWith('DUKE') ||
+              a.flight?.startsWith('FORTE') ||
+              a.flight?.startsWith('LAGR') ||
+              a.flight?.startsWith('HOMER') ||
+              a.flight?.startsWith('USAF') ||
+              a.flight?.startsWith('UAF') ||
+              a.ownOp?.toLowerCase().includes('air force') ||
+              a.ownOp?.toLowerCase().includes('military') ||
+              a.category === 'A5';
+
             scrapedEvents.push({
-              id: "opensky-" + i,
+              id: "adsb-" + (a.hex || i),
               type: "aircraft",
-              lat: s[6],
-              lng: s[5],
-              label: (s[1]?.trim() || "UNID-" + i),
-              intensity: 0.3,
-              details: `Real aircraft: ${s[1]?.trim() || "Unknown"}. Origin: ${s[2] || "Unknown"}. Alt: ${s[7] ? Math.round(s[7]) + "m" : "Unknown"}. Speed: ${s[9] ? Math.round(s[9]) + "m/s" : "Unknown"}.`,
+              lat: a.lat,
+              lng: a.lon,
+              label: isMilitary ? `⚡ MIL: ${a.flight?.trim() || a.hex}` : (a.flight?.trim() || a.hex || "UNID"),
+              intensity: isMilitary ? 0.9 : 0.3,
+              details: `${isMilitary ? '⚠️ MILITARY AIRCRAFT' : 'Civil aircraft'}: ${a.flight?.trim() || 'Unknown'}. Alt: ${a.alt_baro || 'Unknown'}ft. Speed: ${a.gs || 'Unknown'}kts. Squawk: ${a.squawk || 'None'}. Type: ${a.t || 'Unknown'}.`,
               timestamp: new Date().toISOString(),
-              path: [[s[6], s[5]]]
+              path: [[a.lat, a.lon]]
             });
           }
         });
-        addLog(`OPENSKY: ${Math.min(aircraftData.states.length, 30)} REAL AIRCRAFT TRACKED.`);
+        const total = aircraftData.ac.filter((a: any) => a.lat).length;
+        addLog(`ADSB.FI: ${total} REAL AIRCRAFT TRACKED OVER MENA.`);
       }
 
       // USGS Seismic — detects earthquakes + explosions + missile impacts
@@ -767,4 +779,3 @@ export default function App() {
     </div>
   );
 }
-
