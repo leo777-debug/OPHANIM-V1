@@ -1,20 +1,24 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
-# Run and deploy your AI Studio app
-
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/728f0ab6-af5c-47d7-aaf0-4a1f66ee963f
-
-## Run Locally
-
-**Prerequisites:**  Node.js
+# OPHANIM-V1 🛡️
+### Autonomous AI Intelligence Proxy — MENA Region
 
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+
+## OVERVIEW
+
+OPHANIM-V1 is the world's first autonomous AI intelligence proxy focused on the MENA region. It fuses live OSINT data streams — aircraft, vessels, satellites, and news — into a single tactical dashboard powered by an evolving AI analysis engine called **ASI-EVOLVE**.
+
+It doesn't just monitor. It predicts.
+
+---
+
+## FEATURES
+
+- **Live Intel Fusion** — Real-time ADS-B aircraft tracking, AIS maritime vessels, NASA EONET environmental events
+- **ASI-EVOLVE Engine** — AI-powered threat analysis using DeepSeek/Gemini with self-correcting logic
+- **Tactical Map** — Interactive Leaflet.js map with live-moving nodes and trajectory paths
+- **Cognition Store** — Persistent tactical memory that evolves with each analysis
+- **News Feed** — Live MENA security and conflict news via NewsAPI
+- **Operator Auth** — Secure signup with Supabase storing operator credentials
+- **CSV Import** — Import custom intelligence data via CSV
+- **Auto-Monitor** — Background threat scanning every 2 minutes
+
