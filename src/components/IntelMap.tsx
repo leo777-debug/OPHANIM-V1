@@ -2,7 +2,7 @@ import React from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { RefreshCw, Plane, Ship, Orbit, Radio } from "lucide-react";
+import { RefreshCw, Plane, Ship, Orbit, Radio, AlertTriangle, Zap, Globe } from "lucide-react";
 import { IntelligenceEvent } from "../types";
 import { renderToString } from "react-dom/server";
 
@@ -24,6 +24,8 @@ const createTacticalIcon = (type: string, color: string = "#00ff41") => {
   if (type === "aircraft") iconComponent = <Plane className="w-5 h-5" />;
   if (type === "vessel") iconComponent = <Ship className="w-5 h-5" />;
   if (type === "satellite") iconComponent = <Orbit className="w-5 h-5" />;
+  if (type === "conflict") iconComponent = <AlertTriangle className="w-5 h-5" />;
+  if (type === "news") iconComponent = <Zap className="w-5 h-5" />;
 
   return L.divIcon({
     html: `<div style="color: ${color}; filter: drop-shadow(0 0 5px ${color}44);">${renderToString(iconComponent)}</div>`,
@@ -123,12 +125,22 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
       {/* Map Overlay Controls */}
       <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
         <div className="hud-bg hud-border p-2 text-[10px] uppercase tracking-widest text-[var(--color-brand-primary)]">
-          Grid: Active
+          GRID: SYNCED
         </div>
-        <div className="hud-bg hud-border p-2 text-[10px] uppercase tracking-widest text-[#555]">
-          Sat: Offline
+        <div className={cn(
+          "hud-bg hud-border p-2 text-[10px] uppercase tracking-widest transition-colors",
+          events.some(e => e.type === 'satellite') ? "text-[var(--color-brand-primary)]" : "text-[#555]"
+        )}>
+          SAT_ORBIT: {events.some(e => e.type === 'satellite') ? "ACTIVE" : "SCANNING"}
+        </div>
+        <div className="hud-bg hud-border p-2 text-[10px] uppercase tracking-widest text-[var(--color-brand-primary)]">
+          ADSB: LIVE
         </div>
       </div>
     </div>
   );
+}
+
+function cn(...inputs: any[]) {
+  return inputs.filter(Boolean).join(' ');
 }
