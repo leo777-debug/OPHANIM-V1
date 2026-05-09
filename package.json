@@ -12,7 +12,8 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@google/genai": "^1.52.0",
+    "@google/genai": "^1.29.0",
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.105.3",
     "@tailwindcss/vite": "^4.1.14",
     "@types/leaflet": "^1.9.21",
