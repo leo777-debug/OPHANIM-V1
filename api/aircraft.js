@@ -1,19 +1,15 @@
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
   try {
-    // Use ADS-B Exchange which allows server-side fetching
+    // ADS-B Exchange free API - no key needed!
     const resp = await fetch('https://api.adsb.one/v2/point/25/45/800', {
       headers: { 
-        'User-Agent': 'Mozilla/5.0 (compatible; OPHANIM/1.0)',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         'Accept': 'application/json',
-        'Accept-Encoding': 'gzip'
+        'Referer': 'https://www.adsbexchange.com'
       }
     });
     const text = await resp.text();
-    // Check if HTML returned
-    if (text.startsWith('<')) {
-      return res.json({ ac: [] });
-    }
+    if (text.startsWith('<')) return res.json({ ac: [] });
     const data = JSON.parse(text);
     res.json(data);
   } catch (err) {
