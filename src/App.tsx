@@ -35,8 +35,26 @@ import { supabase } from "./lib/supabase";
 import { GoogleGenAI, Type } from "@google/genai";
 import { getSatellitePosition } from "./lib/orbit";
 
-const ai = new GoogleGenAI({ apiKey: (process as any).env.GEMINI_API_KEY });
-const model = "gemini-3-flash-preview";
+// Safe way to access environment variables in both dev (Vite) and prod (Node/Express)
+const getEnvVar = (name: string): string => {
+  try {
+    // Try Vite's import.meta.env
+    const viteKey = `VITE_${name}`;
+    const viteVal = (import.meta as any).env[viteKey];
+    if (viteVal) return viteVal;
+    
+    // Try Node's process.env
+    if (typeof process !== 'undefined' && process.env) {
+      return (process.env as any)[name] || "";
+    }
+  } catch (e) {
+    // Silent fail
+  }
+  return "";
+};
+
+const ai = new GoogleGenAI({ apiKey: getEnvVar("GEMINI_API_KEY") });
+const model = "gemini-2.0-flash"; // More stable model alias
 
 const ASI_SYSTEM_PROMPT = `
 You are ASI-EVOLVE (Autonomous Super Intelligence - Evolutionary Tactical Reconnaissance).

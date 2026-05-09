@@ -4,7 +4,6 @@ import path from "path";
 import fs from "fs/promises";
 import cors from "cors";
 import { fileURLToPath } from "url";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,9 +14,6 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json());
-
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const COGNITION_PATH = path.join(process.cwd(), "cognition.json");
 
