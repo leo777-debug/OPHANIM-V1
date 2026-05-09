@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -6,7 +6,6 @@ import { RefreshCw, Plane, Ship, Orbit, Radio } from "lucide-react";
 import { IntelligenceEvent } from "../types";
 import { renderToString } from "react-dom/server";
 
-// Fix for default marker icons in Leaflet
 const markerIcon = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png";
 const markerShadow = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png";
 
@@ -40,6 +39,9 @@ interface IntelMapProps {
 }
 
 export default function IntelMap({ events, selectedEvent, onEventClick }: IntelMapProps) {
+  const [showVesselLayer, setShowVesselLayer] = useState(false);
+  const [showFlightLayer, setShowFlightLayer] = useState(false);
+
   return (
     <div className="relative w-full h-full bg-black">
       {events.length === 0 && (
@@ -55,6 +57,30 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         </div>
       )}
 
+      {/* VesselFinder Live Ship Overlay */}
+      {showVesselLayer && (
+        <div className="absolute inset-0 z-[900] pointer-events-none">
+          <iframe
+            src="https://www.vesselfinder.com/aismap?zoom=6&lat=25&lon=55&width=100%25&height=100%25&names=true&mmsi=&track=false&fleet=false&fleet_name=false&fleet_hideOthers=false"
+            className="w-full h-full border-0 opacity-80"
+            style={{ pointerEvents: 'auto', mixBlendMode: 'screen' }}
+            title="VesselFinder Live Ships"
+          />
+        </div>
+      )}
+
+      {/* FlightRadar24 Live Flight Overlay */}
+      {showFlightLayer && (
+        <div className="absolute inset-0 z-[850] pointer-events-none">
+          <iframe
+            src="https://www.flightradar24.com/simple?lat=25&lon=50&z=6"
+            className="w-full h-full border-0 opacity-70"
+            style={{ pointerEvents: 'auto', mixBlendMode: 'screen' }}
+            title="FlightRadar24 Live Flights"
+          />
+        </div>
+      )}
+
       <MapContainer
         center={[24.0, 50.0]}
         zoom={5}
@@ -67,15 +93,17 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         />
         
         {events.map((event) => {
-          const color = event.intensity > 0.8 ? "#ff4444" : event.type === 'vessel' ? '#00eaff' : event.type === 'satellite' ? '#d400ff' : "#00ff41";
+          const color = event.intensity > 0.8 ? "#ff4444" : 
+            event.type === 'vessel' ? '#00eaff' : 
+            event.type === 'satellite' ? '#d400ff' : 
+            event.type === 'conflict' ? '#ff8800' :
+            "#00ff41";
           return (
             <React.Fragment key={event.id}>
               <Marker 
                 position={[event.lat, event.lng]}
                 icon={createTacticalIcon(event.type, color)}
-                eventHandlers={{
-                  click: () => onEventClick(event),
-                }}
+                eventHandlers={{ click: () => onEventClick(event) }}
               >
                 <Popup className="tactical-popup">
                   <div className="text-xs bg-[#050505] text-[#00ff41] p-2 border border-[#00ff41]/20">
@@ -86,22 +114,16 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
                 </Popup>
               </Marker>
               
-              {/* Route visualization */}
-              {event.path && (
+              {event.path && event.path.length > 1 && (
                 <Polyline 
                   positions={event.path}
                   pathOptions={{
-                    color: color,
-                    weight: 1.5,
-                    opacity: 0.6,
-                    dashArray: "4, 8",
-                    lineCap: "round",
-                    lineJoin: "round"
+                    color: color, weight: 1.5, opacity: 0.6,
+                    dashArray: "4, 8", lineCap: "round", lineJoin: "round"
                   }}
                 />
               )}
 
-              {/* Threat radius visualization */}
               {event.intensity > 0.6 && (
                 <Circle
                   center={[event.lat, event.lng]}
@@ -109,9 +131,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
                   pathOptions={{
                     color: event.intensity > 0.8 ? "#ff4444" : "#ffaa00",
                     fillColor: event.intensity > 0.8 ? "#ff4444" : "#ffaa00",
-                    fillOpacity: 0.15,
-                    weight: 1,
-                    dashArray: "5, 5"
+                    fillOpacity: 0.15, weight: 1, dashArray: "5, 5"
                   }}
                 />
               )}
@@ -128,6 +148,34 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         <div className="hud-bg hud-border p-2 text-[10px] uppercase tracking-widest text-[#555]">
           Sat: Offline
         </div>
+
+        {/* Live Layer Toggles */}
+        <button
+          onClick={() => setShowVesselLayer(!showVesselLayer)}
+          className={`p-2 text-[9px] uppercase tracking-widest border transition-all flex items-center gap-1 ${showVesselLayer ? 'border-[#00eaff] text-[#00eaff] bg-[#00eaff]/10' : 'border-[#333] text-[#555] hud-bg'}`}
+        >
+          <Ship className="w-3 h-3" />
+          {showVesselLayer ? 'AIS: LIVE' : 'AIS: OFF'}
+        </button>
+
+        <button
+          onClick={() => setShowFlightLayer(!showFlightLayer)}
+          className={`p-2 text-[9px] uppercase tracking-widest border transition-all flex items-center gap-1 ${showFlightLayer ? 'border-[#00ff41] text-[#00ff41] bg-[#00ff41]/10' : 'border-[#333] text-[#555] hud-bg'}`}
+        >
+          <Plane className="w-3 h-3" />
+          {showFlightLayer ? 'ADS-B: LIVE' : 'ADS-B: OFF'}
+        </button>
+
+        {/* GPSJam Link */}
+        <a
+          href="https://gpsjam.org/?lat=25&lon=45&z=5"
+          target="_blank"
+          rel="noreferrer"
+          className="p-2 text-[9px] uppercase tracking-widest border border-[#333] text-[#555] hud-bg hover:border-yellow-500 hover:text-yellow-500 transition-all flex items-center gap-1"
+        >
+          <Radio className="w-3 h-3" />
+          GPS JAM →
+        </a>
       </div>
     </div>
   );
