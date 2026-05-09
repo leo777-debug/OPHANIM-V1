@@ -159,7 +159,7 @@ export default function App() {
         addLog(`EONET: ${nasaData.events.length} ENVIRONMENTAL NODES SYNCED.`);
       }
 
-      // AviationStack flights
+      // AviationStack flights (backup if OpenSky empty)
       if (aviaData?.data) {
         aviaData.data.forEach((f: any, i: number) => {
           if (f.live?.latitude) {
@@ -287,25 +287,11 @@ export default function App() {
         });
       });
 
-      // Mocked vessels
-      const ships = ["EVER-GIVEN-RELIEF", "COSCO-SHIPPING-PEARL", "MSC-ISABELLA", "MAERSK-MC-KINNEY"];
-      ships.forEach((name, i) => {
-        const baseLat = 15.0 + (Math.random() - 0.5) * 10;
-        const baseLng = 50.0 + (Math.random() - 0.5) * 10;
-        scrapedEvents.push({
-          id: "ship-" + i,
-          type: "vessel",
-          lat: baseLat,
-          lng: baseLng,
-          label: name,
-          intensity: 0.3,
-          details: `Marine vessel ${name} at cruise speed 18 knots. Identity: Verified Merchant.`,
-          timestamp: new Date().toISOString(),
-          path: [[baseLat - 2, baseLng - 2], [baseLat - 1, baseLng - 1], [baseLat, baseLng]]
-        });
+      setEvents(prev => {
+        // Keep AIS live ships, replace everything else
+        const aisShips = prev.filter(e => e.id.startsWith('ais-'));
+        return [...aisShips, ...scrapedEvents];
       });
-
-      setEvents(scrapedEvents);
       addLog(`FUSION COMPLETE. ${scrapedEvents.length} TACTICAL NODES SYNCED.`);
     } catch (err) {
       addLog("INTEL FUSION FAILED: CHECK API CONFIG.");
@@ -409,7 +395,52 @@ export default function App() {
     if (!session && !demoAccess) return;
     fetchIntel();
     const interval = setInterval(fetchIntel, 60000);
-    return () => clearInterval(interval);
+
+    // AISStream WebSocket — real live ships over MENA
+    let ws: WebSocket | null = null;
+    try {
+      ws = new WebSocket('wss://stream.aisstream.io/v0/stream');
+      ws.onopen = () => {
+        ws!.send(JSON.stringify({
+          APIKey: (import.meta as any).env.VITE_AISSTREAM_KEY,
+          BoundingBoxes: [[[10, 25], [45, 65]]]
+        }));
+        addLog("AISSTREAM: LIVE VESSEL FEED CONNECTED.");
+      };
+      ws.onmessage = (raw) => {
+        try {
+          const msg = JSON.parse(raw.data);
+          const pos = msg.Message?.PositionReport;
+          const meta = msg.MetaData;
+          if (pos && meta && pos.Latitude && pos.Longitude) {
+            const ship: IntelligenceEvent = {
+              id: "ais-" + meta.MMSI,
+              type: "vessel",
+              lat: pos.Latitude,
+              lng: pos.Longitude,
+              label: meta.ShipName?.trim() || "VESSEL-" + meta.MMSI,
+              intensity: 0.4,
+              details: `LIVE vessel: ${meta.ShipName?.trim() || "Unknown"}. MMSI: ${meta.MMSI}. Speed: ${pos.SpeedOverGround}kn. Heading: ${pos.TrueHeading}°.`,
+              timestamp: new Date().toISOString(),
+              path: [[pos.Latitude, pos.Longitude]]
+            };
+            setEvents(prev => {
+              const filtered = prev.filter(e => e.id !== ship.id);
+              return [...filtered, ship];
+            });
+          }
+        } catch (e) {}
+      };
+      ws.onerror = () => addLog("AISSTREAM: CONNECTION ERROR.");
+      ws.onclose = () => addLog("AISSTREAM: FEED DISCONNECTED.");
+    } catch (e) {
+      addLog("AISSTREAM: FAILED TO CONNECT.");
+    }
+
+    return () => {
+      clearInterval(interval);
+      ws?.close();
+    };
   }, [session, demoAccess]);
 
   useEffect(() => {
