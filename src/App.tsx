@@ -423,6 +423,49 @@ export default function App() {
     fetchIntel();
     const interval = setInterval(fetchIntel, 60000);
 
+    // ADSB.fi — fetch real aircraft from browser (bypasses Vercel blocking)
+    const fetchAircraft = async () => {
+      try {
+        const resp = await fetch('https://opendata.adsb.fi/api/v2/lat/25/lon/45/dist/800');
+        const data = await resp.json();
+        if (data.ac && data.ac.length > 0) {
+          const aircraft: IntelligenceEvent[] = data.ac
+            .filter((a: any) => a.lat && a.lon)
+            .map((a: any) => {
+              const isMilitary = a.t?.includes('MIL') ||
+                a.flight?.startsWith('RCH') ||
+                a.flight?.startsWith('FORTE') ||
+                a.flight?.startsWith('LAGR') ||
+                a.flight?.startsWith('HOMER') ||
+                a.flight?.startsWith('USAF') ||
+                a.squawk === '7700' ||
+                a.squawk === '7600';
+              return {
+                id: "adsb-" + a.hex,
+                type: "aircraft" as const,
+                lat: a.lat,
+                lng: a.lon,
+                label: isMilitary ? `⚡ MIL: ${a.flight?.trim() || a.hex}` : (a.flight?.trim() || a.hex || "UNID"),
+                intensity: isMilitary ? 0.9 : 0.3,
+                details: `${isMilitary ? '⚠️ MILITARY' : 'Civil'}: ${a.flight?.trim() || 'Unknown'}. Alt: ${a.alt_baro || '?'}ft. Speed: ${a.gs || '?'}kts. Type: ${a.t || '?'}.`,
+                timestamp: new Date().toISOString(),
+                path: [[a.lat, a.lon]] as [number, number][]
+              };
+            });
+          setEvents(prev => {
+            const nonAdsb = prev.filter(e => !e.id.startsWith('adsb-'));
+            return [...nonAdsb, ...aircraft];
+          });
+          addLog(`ADSB.FI: ${aircraft.length} REAL AIRCRAFT LIVE.`);
+        }
+      } catch (e) {
+        addLog("ADSB.FI: FETCH FAILED.");
+      }
+    };
+
+    fetchAircraft();
+    const aircraftInterval = setInterval(fetchAircraft, 30000);
+
     // AISStream WebSocket — real live ships over MENA
     let ws: WebSocket | null = null;
     try {
@@ -466,6 +509,7 @@ export default function App() {
 
     return () => {
       clearInterval(interval);
+      clearInterval(aircraftInterval);
       ws?.close();
     };
   }, [session, demoAccess]);
