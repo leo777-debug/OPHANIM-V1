@@ -113,7 +113,7 @@ export default function App() {
   const fetchIntel = async () => {
     addLog("POLLING ALL DATA STREAMS...");
     try {
-      const [newsRes, cogRes, nasaRes, aviaRes, quakeRes, aircraftRes, conflictRes, firmsRes] = await Promise.all([
+      const [newsRes, cogRes, nasaRes, aviaRes, quakeRes, aircraftRes, conflictRes, firmsRes, satRes] = await Promise.all([
         fetch(`${API_BASE}/api/news`).catch(() => null),
         fetch(`${API_BASE}/api/cognition`).catch(() => null),
         fetch(`${API_BASE}/api/nasa`).catch(() => null),
@@ -122,9 +122,10 @@ export default function App() {
         fetch(`${API_BASE}/api/aircraft`).catch(() => null),
         fetch(`${API_BASE}/api/conflicts`).catch(() => null),
         fetch(`${API_BASE}/api/firms`).catch(() => null),
+        fetch(`${API_BASE}/api/satellites`).catch(() => null),
       ]);
 
-      const [newsData, cogData, nasaData, aviaData, quakeData, aircraftData, conflictData, firmsData] = await Promise.all([
+      const [newsData, cogData, nasaData, aviaData, quakeData, aircraftData, conflictData, firmsData, satData] = await Promise.all([
         newsRes?.ok ? newsRes.json() : null,
         cogRes?.ok ? cogRes.json() : null,
         nasaRes?.ok ? nasaRes.json() : null,
@@ -133,6 +134,7 @@ export default function App() {
         aircraftRes?.ok ? aircraftRes.json() : null,
         conflictRes?.ok ? conflictRes.json() : null,
         firmsRes?.ok ? firmsRes.text() : null,
+        satRes?.ok ? satRes.json() : null,
       ]);
 
       if (newsData?.articles) setNews(newsData.articles);
@@ -263,29 +265,41 @@ export default function App() {
         addLog(`FIRMS: FIRE NODES SYNCED.`);
       }
 
-      // Mocked satellites
-      const sats = ["STARLINK-1024", "GPS-BIIA-10", "ISS-LOW-ORBIT", "INTELSAT-34"];
-      sats.forEach((name, i) => {
-        const baseLat = 25.0 + (Math.random() - 0.5) * 15;
-        const baseLng = 45.0 + (Math.random() - 0.5) * 15;
-        scrapedEvents.push({
-          id: "sat-" + i,
-          type: "satellite",
-          lat: baseLat,
-          lng: baseLng,
-          label: name,
-          intensity: 0.1,
-          details: `Orbital Node ${name}. Velocity: 7.6km/s. Signal: Stable.`,
-          timestamp: new Date().toISOString(),
-          path: [
-            [baseLat - 5, baseLng - 10],
-            [baseLat - 2, baseLng - 4],
-            [baseLat, baseLng],
-            [baseLat + 2, baseLng + 4],
-            [baseLat + 5, baseLng + 10]
-          ]
+      // N2YO real satellites over MENA
+      if (satData?.above && satData.above.length > 0) {
+        satData.above.forEach((s: any) => {
+          scrapedEvents.push({
+            id: "n2yo-" + s.satid,
+            type: "satellite",
+            lat: s.satlat,
+            lng: s.satlng,
+            label: s.satname,
+            intensity: 0.1,
+            details: `Real satellite: ${s.satname}. NORAD ID: ${s.satid}. Altitude: ${Math.round(s.satalt)}km. Launched: ${s.launchDate}.`,
+            timestamp: new Date().toISOString(),
+            path: [[s.satlat, s.satlng]]
+          });
         });
-      });
+        addLog(`N2YO: ${satData.above.length} REAL SATELLITES TRACKED OVER MENA.`);
+      } else {
+        // Fallback mocked satellites if N2YO key not set
+        const sats = ["STARLINK-1024", "GPS-BIIA-10", "ISS-LOW-ORBIT", "INTELSAT-34"];
+        sats.forEach((name, i) => {
+          const baseLat = 25.0 + (Math.random() - 0.5) * 15;
+          const baseLng = 45.0 + (Math.random() - 0.5) * 15;
+          scrapedEvents.push({
+            id: "sat-" + i,
+            type: "satellite",
+            lat: baseLat,
+            lng: baseLng,
+            label: name,
+            intensity: 0.1,
+            details: `Orbital Node ${name}. Velocity: 7.6km/s. Signal: Stable.`,
+            timestamp: new Date().toISOString(),
+            path: [[baseLat - 5, baseLng - 10], [baseLat, baseLng], [baseLat + 5, baseLng + 10]]
+          });
+        });
+      }
 
       setEvents(prev => {
         // Keep AIS live ships, replace everything else
