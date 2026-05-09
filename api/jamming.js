@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   try {
-    // GPSJam.org - free GPS interference data, no key needed!
-    const resp = await fetch('https://gpsjam.org/api/v1/jams?lat=25&lon=45&z=5', {
+    const today = new Date().toISOString().split('T')[0];
+    const resp = await fetch(`https://gpsjam.org/api/v1/jams?date=${today}`, {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
     const text = await resp.text();
