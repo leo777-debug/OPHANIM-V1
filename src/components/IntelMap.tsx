@@ -152,18 +152,26 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         {/* Live Layer Toggles */}
         <button
           onClick={() => setShowVesselLayer(!showVesselLayer)}
-          className={`p-2 text-[9px] uppercase tracking-widest border transition-all flex items-center gap-1 ${showVesselLayer ? 'border-[#00eaff] text-[#00eaff] bg-[#00eaff]/10' : 'border-[#333] text-[#555] hud-bg'}`}
+          className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${
+            showVesselLayer 
+              ? 'border-[#00eaff] text-black bg-[#00eaff] shadow-[0_0_15px_rgba(0,234,255,0.6)]' 
+              : 'border-[#00eaff] text-[#00eaff] bg-[#00eaff]/10 hover:bg-[#00eaff]/20 shadow-[0_0_8px_rgba(0,234,255,0.3)] animate-pulse'
+          }`}
         >
-          <Ship className="w-3 h-3" />
-          {showVesselLayer ? 'AIS: LIVE' : 'AIS: OFF'}
+          <Ship className="w-4 h-4" />
+          {showVesselLayer ? '🔴 AIS: LIVE' : '🚢 SHIPS LIVE'}
         </button>
 
         <button
           onClick={() => setShowFlightLayer(!showFlightLayer)}
-          className={`p-2 text-[9px] uppercase tracking-widest border transition-all flex items-center gap-1 ${showFlightLayer ? 'border-[#00ff41] text-[#00ff41] bg-[#00ff41]/10' : 'border-[#333] text-[#555] hud-bg'}`}
+          className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${
+            showFlightLayer 
+              ? 'border-[#00ff41] text-black bg-[#00ff41] shadow-[0_0_15px_rgba(0,255,65,0.6)]' 
+              : 'border-[#00ff41] text-[#00ff41] bg-[#00ff41]/10 hover:bg-[#00ff41]/20 shadow-[0_0_8px_rgba(0,255,65,0.3)] animate-pulse'
+          }`}
         >
-          <Plane className="w-3 h-3" />
-          {showFlightLayer ? 'ADS-B: LIVE' : 'ADS-B: OFF'}
+          <Plane className="w-4 h-4" />
+          {showFlightLayer ? '🔴 ADS-B: LIVE' : '✈️ FLIGHTS LIVE'}
         </button>
 
         {/* GPSJam Link */}
@@ -171,10 +179,10 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
           href="https://gpsjam.org/?lat=25&lon=45&z=5"
           target="_blank"
           rel="noreferrer"
-          className="p-2 text-[9px] uppercase tracking-widest border border-[#333] text-[#555] hud-bg hover:border-yellow-500 hover:text-yellow-500 transition-all flex items-center gap-1"
+          className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-yellow-500 text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20 shadow-[0_0_8px_rgba(234,179,8,0.3)] transition-all flex items-center gap-2 animate-pulse"
         >
-          <Radio className="w-3 h-3" />
-          GPS JAM →
+          <Radio className="w-4 h-4" />
+          📡 GPS JAMMING
         </a>
       </div>
     </div>
