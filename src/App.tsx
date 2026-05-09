@@ -411,45 +411,34 @@ export default function App() {
     fetchIntel();
     const interval = setInterval(fetchIntel, 60000);
 
-    // ================== REAL-TIME AIS WEBSOCKET (SHIPS) ==================
-  useEffect(() => {
-    if (!session && !demoAccess) return;
-
-    fetchIntel();
-    const interval = setInterval(fetchIntel, 60000);
-
+    // AISStream WebSocket — real live ships over MENA
     let ws: WebSocket | null = null;
-
     try {
       ws = new WebSocket('wss://stream.aisstream.io/v0/stream');
-
       ws.onopen = () => {
         ws!.send(JSON.stringify({
           APIKey: (import.meta as any).env.VITE_AISSTREAM_KEY,
           BoundingBoxes: [[[10, 25], [45, 65]]]
         }));
-        addLog("✅ AISSTREAM LIVE WEBSOCKET CONNECTED");
+        addLog("AISSTREAM: LIVE VESSEL FEED CONNECTED.");
       };
-
       ws.onmessage = (raw) => {
         try {
           const msg = JSON.parse(raw.data);
           const pos = msg.Message?.PositionReport;
           const meta = msg.MetaData;
-
           if (pos && meta && pos.Latitude && pos.Longitude) {
             const ship: IntelligenceEvent = {
               id: "ais-" + meta.MMSI,
               type: "vessel",
               lat: pos.Latitude,
               lng: pos.Longitude,
-              label: (meta.ShipName?.trim() || "VESSEL-" + meta.MMSI).substring(0, 20),
-              intensity: 0.45,
-              details: `LIVE • ${meta.ShipName?.trim() || 'Unknown'} • MMSI:${meta.MMSI} • ${pos.SpeedOverGround || 0}kn`,
+              label: meta.ShipName?.trim() || "VESSEL-" + meta.MMSI,
+              intensity: 0.4,
+              details: `LIVE vessel: ${meta.ShipName?.trim() || "Unknown"}. MMSI: ${meta.MMSI}. Speed: ${pos.SpeedOverGround}kn. Heading: ${pos.TrueHeading}°.`,
               timestamp: new Date().toISOString(),
               path: [[pos.Latitude, pos.Longitude]]
             };
-
             setEvents(prev => {
               const filtered = prev.filter(e => e.id !== ship.id);
               return [...filtered, ship];
@@ -457,17 +446,15 @@ export default function App() {
           }
         } catch (e) {}
       };
-
-      ws.onerror = () => addLog("❌ AISSTREAM WEBSOCKET ERROR");
-      ws.onclose = () => addLog("⚠️ AISSTREAM DISCONNECTED");
-
+      ws.onerror = () => addLog("AISSTREAM: CONNECTION ERROR.");
+      ws.onclose = () => addLog("AISSTREAM: FEED DISCONNECTED.");
     } catch (e) {
-      addLog("❌ FAILED TO START AIS WEBSOCKET");
+      addLog("AISSTREAM: FAILED TO CONNECT.");
     }
 
     return () => {
       clearInterval(interval);
-      if (ws) ws.close();
+      ws?.close();
     };
   }, [session, demoAccess]);
 
@@ -780,5 +767,4 @@ export default function App() {
     </div>
   );
 }
-
 
