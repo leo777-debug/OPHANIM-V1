@@ -1,8 +1,12 @@
-// api/jamming.js
 export default async function handler(req, res) {
   try {
-    const resp = await fetch('https://gpsjam.org/api/v1/jams?lat=25&lon=45&z=5');
-    const data = await resp.json();
+    // GPSJam.org - free GPS interference data, no key needed!
+    const resp = await fetch('https://gpsjam.org/api/v1/jams?lat=25&lon=45&z=5', {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const text = await resp.text();
+    if (text.startsWith('<')) return res.json({ jams: [] });
+    const data = JSON.parse(text);
     res.json(data);
   } catch (err) {
     res.json({ jams: [] });
