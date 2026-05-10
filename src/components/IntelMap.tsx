@@ -37,6 +37,7 @@ const GIBS_LAYERS = [
 
 export default function IntelMap({ events, selectedEvent, onEventClick }: IntelMapProps) {
   const [showVesselLayer, setShowVesselLayer] = useState(false);
+  const [showFlightLayer, setShowFlightLayer] = useState(false);
   const [showGibsPanel, setShowGibsPanel] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
   const [gibsLayer, setGibsLayer] = useState(0);
@@ -143,6 +144,18 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         </div>
       )}
 
+      {/* OpenSky Live Flight Overlay */}
+      {showFlightLayer && (
+        <div className="absolute inset-0 z-[850]">
+          <iframe
+            src="https://opensky-network.org/network/explorer"
+            className="w-full h-full border-0"
+            style={{ mixBlendMode: 'screen', opacity: 0.85 }}
+            title="OpenSky Live Flights"
+          />
+        </div>
+      )}
+
       <MapContainer center={[24.0, 50.0]} zoom={5} className="w-full h-full" zoomControl={false}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -214,6 +227,25 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
           <Ship className="w-4 h-4" />
           {showVesselLayer ? '🔴 AIS: LIVE' : '🚢 SHIPS LIVE'}
         </button>
+
+        {/* Flights */}
+        <button onClick={() => setShowFlightLayer(!showFlightLayer)}
+          className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${
+            showFlightLayer
+              ? 'border-[#00ff41] text-black bg-[#00ff41] shadow-[0_0_15px_rgba(0,255,65,0.6)]'
+              : 'border-[#00ff41] text-[#00ff41] bg-[#00ff41]/10 hover:bg-[#00ff41]/20 shadow-[0_0_8px_rgba(0,255,65,0.3)] animate-pulse'
+          }`}
+        >
+          <Plane className="w-4 h-4" />
+          {showFlightLayer ? '🔴 ADS-B: LIVE' : '✈️ FLIGHTS LIVE'}
+        </button>
+
+        {/* No-Fly Zones */}
+        <a href="https://www.notaminfo.com/middleeastmap" target="_blank" rel="noreferrer"
+          className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-orange-500 text-orange-500 bg-orange-500/10 hover:bg-orange-500/20 shadow-[0_0_8px_rgba(249,115,22,0.3)] transition-all flex items-center gap-2"
+        >
+          <Plane className="w-4 h-4" /> 🚫 NO-FLY ZONES
+        </a>
 
         {/* GPS Jamming */}
         <a href="https://gpsjam.org/?lat=25&lon=45&z=5" target="_blank" rel="noreferrer"
