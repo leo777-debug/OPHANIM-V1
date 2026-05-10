@@ -48,7 +48,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
       {/* MUST READ INSTRUCTIONS MODAL */}
       {showInstructions && (
         <div className="absolute inset-0 z-[3000] flex items-center justify-center bg-black/90 backdrop-blur-sm">
-          <div className="max-w-lg w-full mx-4 border-2 border-[#00ff41] bg-black p-6 shadow-[0_0_40px_rgba(0,255,65,0.3)]">
+          <div className="max-w-lg w-full mx-4 border-2 border-[#00ff41] bg-black p-6 shadow-[0_0_40px_rgba(0,255,65,0.3)] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-[#00ff41] rounded-full animate-pulse" />
