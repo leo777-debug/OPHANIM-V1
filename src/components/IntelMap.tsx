@@ -295,7 +295,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
   ))}
   <div className="text-[8px] opacity-30 mt-3">Source: NOTAM aggregation • Updated every 60 minutes • For reference only</div>
 </div>
-      
+      </div>
       )}
 
       {/* GPS Jamming Panel */}
