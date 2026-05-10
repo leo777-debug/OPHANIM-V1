@@ -169,7 +169,7 @@ export default function App() {
       ]);
 
       if (newsData?.articles) setNews(newsData.articles);
-      if (cogData) setCognition(cogData);
+      if (cogData && cogData.length > 0) setCognition(cogData);
 
       const scrapedEvents: IntelligenceEvent[] = [];
 
