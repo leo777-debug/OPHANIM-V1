@@ -39,6 +39,8 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
   const [showVesselLayer, setShowVesselLayer] = useState(false);
   const [showFlightLayer, setShowFlightLayer] = useState(false);
   const [showGibsPanel, setShowGibsPanel] = useState(false);
+  const [showNoFlyPanel, setShowNoFlyPanel] = useState(false);
+  const [showJammingPanel, setShowJammingPanel] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
   const [gibsLayer, setGibsLayer] = useState(0);
   const [gibsDate, setGibsDate] = useState(new Date(Date.now() - 86400000).toISOString().split('T')[0]);
@@ -241,19 +243,57 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         </button>
 
         {/* No-Fly Zones - working NOTAM map */}
-        <a href="https://skyvector.com/?ll=25.0,45.0&chart=301&zoom=2" target="_blank" rel="noreferrer"
-          className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-orange-500 text-orange-500 bg-orange-500/10 hover:bg-orange-500/20 shadow-[0_0_8px_rgba(249,115,22,0.3)] transition-all flex items-center gap-2"
+        <button onClick={() => setShowNoFlyPanel(!showNoFlyPanel)}
+          className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${
+            showNoFlyPanel
+              ? 'border-orange-500 text-black bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]'
+              : 'border-orange-500 text-orange-500 bg-orange-500/10 hover:bg-orange-500/20 shadow-[0_0_8px_rgba(249,115,22,0.3)]'
+          }`}
         >
           <Plane className="w-4 h-4" /> 🚫 NO-FLY ZONES
-        </a>
+        </button>
 
         {/* GPS Jamming */}
-        <a href="https://gpsjam.org/?lat=25&lon=45&z=5" target="_blank" rel="noreferrer"
-          className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-yellow-500 text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20 shadow-[0_0_8px_rgba(234,179,8,0.3)] transition-all flex items-center gap-2"
+        <button onClick={() => setShowJammingPanel(!showJammingPanel)}
+          className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${
+            showJammingPanel
+              ? 'border-yellow-500 text-black bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.6)]'
+              : 'border-yellow-500 text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20 shadow-[0_0_8px_rgba(234,179,8,0.3)]'
+          }`}
         >
           <Radio className="w-4 h-4" /> 📡 GPS JAMMING
-        </a>
+        </button>
       </div>
+
+      {/* No-Fly Zones Panel */}
+      {showNoFlyPanel && (
+        <div className="absolute bottom-4 left-4 z-[2000] w-[600px] h-[400px] border-2 border-orange-500 bg-black/95 shadow-[0_0_30px_rgba(249,115,22,0.3)] flex flex-col">
+          <div className="flex items-center justify-between p-2 border-b border-orange-500/30">
+            <span className="text-orange-500 font-black text-[11px] tracking-widest">🚫 NO-FLY ZONES & NOTAM — MENA REGION</span>
+            <button onClick={() => setShowNoFlyPanel(false)} className="text-orange-500 hover:text-white"><X className="w-4 h-4" /></button>
+          </div>
+          <iframe
+            src="https://skyvector.com/?ll=25.0,45.0&chart=301&zoom=2"
+            className="flex-1 w-full border-0"
+            title="No-Fly Zones MENA"
+          />
+        </div>
+      )}
+
+      {/* GPS Jamming Panel */}
+      {showJammingPanel && (
+        <div className="absolute bottom-4 right-80 z-[2000] w-[600px] h-[400px] border-2 border-yellow-500 bg-black/95 shadow-[0_0_30px_rgba(234,179,8,0.3)] flex flex-col">
+          <div className="flex items-center justify-between p-2 border-b border-yellow-500/30">
+            <span className="text-yellow-500 font-black text-[11px] tracking-widest">📡 GPS JAMMING/SPOOFING — LIVE MAP</span>
+            <button onClick={() => setShowJammingPanel(false)} className="text-yellow-500 hover:text-white"><X className="w-4 h-4" /></button>
+          </div>
+          <iframe
+            src="https://gpsjam.org/?lat=25&lon=45&z=5"
+            className="flex-1 w-full border-0"
+            title="GPS Jamming Live"
+          />
+        </div>
+      )}
     </div>
   );
 }
