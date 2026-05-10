@@ -48,7 +48,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
       {/* MUST READ INSTRUCTIONS MODAL */}
       {showInstructions && (
         <div className="absolute inset-0 z-[3000] flex items-center justify-center bg-black/90 backdrop-blur-sm">
-          <div className="max-w-lg w-full mx-4 border-2 border-[#00ff41] bg-black p-6 shadow-[0_0_40px_rgba(0,255,65,0.3)] max-h-[90vh] overflow-y-auto">
+          <div className="max-w-lg w-full mx-4 border-2 border-[#00ff41] bg-black p-6 shadow-[0_0_40px_rgba(0,255,65,0.3)]">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-[#00ff41] rounded-full animate-pulse" />
@@ -144,14 +144,14 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         </div>
       )}
 
-      {/* OpenSky Live Flight Overlay */}
+      {/* ADSBExchange Live Flight Overlay */}
       {showFlightLayer && (
         <div className="absolute inset-0 z-[850]">
           <iframe
-            src="https://opensky-network.org/network/explorer"
+            src="https://globe.adsbexchange.com/?lat=25&lon=50&zoom=5&SiteLat=25&SiteLon=50&SiteAlt=0&metric=0&hidef=0&filterAltitude=0&filterType=0"
             className="w-full h-full border-0"
-            style={{ mixBlendMode: 'screen', opacity: 0.85 }}
-            title="OpenSky Live Flights"
+            style={{ mixBlendMode: 'screen', opacity: 0.9 }}
+            title="ADSBExchange Live Flights"
           />
         </div>
       )}
@@ -228,7 +228,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
           {showVesselLayer ? '🔴 AIS: LIVE' : '🚢 SHIPS LIVE'}
         </button>
 
-        {/* Flights */}
+        {/* Flights - use ADSBExchange which allows embed */}
         <button onClick={() => setShowFlightLayer(!showFlightLayer)}
           className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${
             showFlightLayer
@@ -237,11 +237,11 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
           }`}
         >
           <Plane className="w-4 h-4" />
-          {showFlightLayer ? '🔴 ADS-B: LIVE' : '✈️ FLIGHTS LIVE'}
+          {showFlightLayer ? '🔴 FLIGHTS: LIVE' : '✈️ FLIGHTS LIVE'}
         </button>
 
-        {/* No-Fly Zones */}
-        <a href="https://www.notaminfo.com/middleeastmap" target="_blank" rel="noreferrer"
+        {/* No-Fly Zones - working NOTAM map */}
+        <a href="https://skyvector.com/?ll=25.0,45.0&chart=301&zoom=2" target="_blank" rel="noreferrer"
           className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-orange-500 text-orange-500 bg-orange-500/10 hover:bg-orange-500/20 shadow-[0_0_8px_rgba(249,115,22,0.3)] transition-all flex items-center gap-2"
         >
           <Plane className="w-4 h-4" /> 🚫 NO-FLY ZONES
