@@ -51,6 +51,7 @@ export default function App() {
   const liveAircraftRef = useRef<Map<string, IntelligenceEvent>>(new Map());
   const liveShipsRef = useRef<Map<string, IntelligenceEvent>>(new Map());
 
+  const addLog = (msg: string) => setLogs(prev => [msg, ...prev].slice(0, 50));
 
   const playAlarm = () => {
     try {
