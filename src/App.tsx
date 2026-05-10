@@ -33,7 +33,13 @@ export default function App() {
   });
   const [events, setEvents] = useState<IntelligenceEvent[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
-  const [cognition, setCognition] = useState<CognitionLesson[]>([]);
+  const [cognition, setCognition] = useState<CognitionLesson[]>([
+    { id: "seed-1", title: "Strait of Hormuz Chokepoint Doctrine", lesson: "Any vessel clustering near Qeshm Island or Abu Musa with AIS dark periods exceeding 2 hours should be treated as high-priority surveillance target. Iranian IRGCN doctrine relies on swarm tactics from these staging points.", context: "ATLAS Historical Intelligence — Persian Gulf Operations" },
+    { id: "seed-2", title: "GPS Spoofing Signature — MENA", lesson: "GPS spoofing events in the eastern Mediterranean and Persian Gulf typically precede kinetic action by 24-72 hours. Vessels reporting impossible positions (inland or stationary while underway) indicate active EW operations.", context: "ATLAS Electronic Warfare Analysis" },
+    { id: "seed-3", title: "Houthi Missile Launch Seismic Signature", lesson: "Ballistic missile launches from Yemen generate shallow seismic events (depth < 2km) with magnitude 1.5-2.5. Cross-reference with ADS-B gaps and news events for confirmation.", context: "ATLAS Yemen Operations Database" },
+    { id: "seed-4", title: "Red Sea Shipping Lane Threat Assessment", lesson: "Vessels transiting Bab el-Mandeb should maintain AIS broadcast and avoid night transit when threat level is ORANGE or above. Historical pattern shows Houthi attacks peak 2200-0200 local time.", context: "ATLAS Maritime Security — Red Sea" },
+    { id: "seed-5", title: "Israeli Air Operations Signature", lesson: "IAF strikes are typically preceded by increased UAV activity over Lebanon/Syria and GPS jamming expanding from northern Israel. ADS-B squawk 7600 clusters indicate communications disruption operations.", context: "ATLAS OSINT — Levant Operations" },
+  ]);
   const [selectedEvent, setSelectedEvent] = useState<IntelligenceEvent | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -45,8 +51,6 @@ export default function App() {
   const liveAircraftRef = useRef<Map<string, IntelligenceEvent>>(new Map());
   const liveShipsRef = useRef<Map<string, IntelligenceEvent>>(new Map());
 
-const addLog = (msg: string) => setLogs(prev => [msg, ...prev].slice(0, 50));
-  
   const playAlarm = () => {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
