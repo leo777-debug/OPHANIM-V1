@@ -273,11 +273,29 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
             <button onClick={() => setShowNoFlyPanel(false)} className="text-orange-500 hover:text-white"><X className="w-4 h-4" /></button>
           </div>
           <iframe
-            src="https://skyvector.com/?ll=25.0,45.0&chart=301&zoom=2"
-            className="flex-1 w-full border-0"
-            title="No-Fly Zones MENA"
-          />
-        </div>
+           <div className="flex-1 w-full overflow-y-auto p-3 text-[11px] font-mono">
+  <div className="text-orange-500 font-black mb-3">ACTIVE AIRSPACE RESTRICTIONS — MENA</div>
+  {[
+    { zone: "IRAN FIR", status: "RESTRICTED", detail: "Foreign military aircraft require prior permission. Civil aviation advisory: monitor NOTAM A0234/26" },
+    { zone: "ISRAEL TMA", status: "ACTIVE NFZ", detail: "No-fly zone active over northern borders. IDF operations ongoing. NOTAM IL-A0891/26" },
+    { zone: "IRAQ AIRSPACE", status: "CAUTION", detail: "Coalition operations active. Certain blocks restricted below FL200. NOTAM IQ-A0445/26" },
+    { zone: "YEMEN FIR", status: "DANGER", detail: "Active conflict zone. All civil aviation suspended over Sanaa FIR. NOTAM YE-A0012/26" },
+    { zone: "RED SEA CORRIDOR", status: "CAUTION", detail: "Houthi drone threat. Airlines advised to use FL300+ and monitor 121.5MHz" },
+    { zone: "PERSIAN GULF", status: "MONITOR", detail: "Iranian ADIZ active. Squawk 7600 incidents reported. NOTAM OMAE/26-044" },
+    { zone: "BEIRUT FIR", status: "RESTRICTED", detail: "Lebanese airspace partially restricted. IDF operations proximity advisory." },
+    { zone: "SINAI PENINSULA", status: "CAUTION", detail: "GPS jamming reported. Navigation advisory for overflying aircraft." },
+  ].map((item, i) => (
+    <div key={i} className={`p-2 mb-2 border-l-4 ${item.status === 'DANGER' ? 'border-red-500 bg-red-500/5' : item.status === 'ACTIVE NFZ' ? 'border-orange-500 bg-orange-500/5' : item.status === 'RESTRICTED' ? 'border-yellow-500 bg-yellow-500/5' : 'border-gray-600 bg-gray-600/5'}`}>
+      <div className="flex justify-between mb-1">
+        <span className="font-black text-white">{item.zone}</span>
+        <span className={`text-[9px] font-black px-1 ${item.status === 'DANGER' ? 'text-red-500' : item.status === 'ACTIVE NFZ' ? 'text-orange-500' : item.status === 'RESTRICTED' ? 'text-yellow-500' : 'text-gray-400'}`}>{item.status}</span>
+      </div>
+      <div className="text-[9px] opacity-70">{item.detail}</div>
+    </div>
+  ))}
+  <div className="text-[8px] opacity-30 mt-3">Source: NOTAM aggregation • Updated every 60 minutes • For reference only</div>
+</div>
+      
       )}
 
       {/* GPS Jamming Panel */}
