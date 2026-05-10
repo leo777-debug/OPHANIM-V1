@@ -45,7 +45,27 @@ export default function App() {
   const liveAircraftRef = useRef<Map<string, IntelligenceEvent>>(new Map());
   const liveShipsRef = useRef<Map<string, IntelligenceEvent>>(new Map());
 
-  const addLog = (msg: string) => setLogs(prev => [msg, ...prev].slice(0, 50));
+  const playAlarm = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const playBeep = (freq: number, start: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'square';
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + duration);
+      };
+      playBeep(880, 0, 0.1);
+      playBeep(660, 0.15, 0.1);
+      playBeep(880, 0.3, 0.1);
+      playBeep(440, 0.45, 0.3);
+    } catch (e) {}
+  };
 
   const handleCSVImport = (file: File) => {
     setIsImporting(true);
@@ -343,6 +363,7 @@ export default function App() {
       if (!isManual && result.threat_score > 40) {
         setAlerts(prev => [{ id: Date.now().toString(), msg: result.summary, score: result.threat_score }, ...prev].slice(0, 5));
         addLog(`[ALERT] THREAT DETECTED [${result.threat_score}%]`);
+        playAlarm();
       }
       addLog(isManual ? "ANALYSIS COMPLETE." : "BACKGROUND SCAN COMPLETE.");
     } catch (err) { addLog("AI ANALYSIS ERROR."); }
