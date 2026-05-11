@@ -103,8 +103,6 @@ interface IntelMapProps {
   events: IntelligenceEvent[];
   selectedEvent: IntelligenceEvent | null;
   onEventClick: (event: IntelligenceEvent) => void;
-  showSatellites?: boolean;
-  onToggleSatellites?: () => void;
 }
 
 export default function IntelMap({ events, selectedEvent, onEventClick }: IntelMapProps) {
@@ -318,14 +316,9 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         </button>
 
         <button onClick={() => setShowSatelliteLayer(!showSatelliteLayer)}
-  className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${showSatellites ? 'border-[#d400ff] text-black bg-[#d400ff]' : 'border-[#d400ff] text-[#d400ff] bg-[#d400ff]/10 animate-pulse'}`}>
-  <Orbit className="w-4 h-4" /> {showSatellites ? '🔴 SAT: ON' : '🛸 SAT TRACKER'}
-</button>
-        
-        <button onClick={() => setShowSatelliteLayer(!showSatelliteLayer)}
-  className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${showSatelliteLayer ? 'border-[#d400ff] text-black bg-[#d400ff]' : 'border-[#d400ff] text-[#d400ff] bg-[#d400ff]/10 animate-pulse'}`}>
-  <Orbit className="w-4 h-4" /> {showSatelliteLayer ? '🔴 N2YO: LIVE' : '🛸 N2YO LIVE'}
-</button>
+          className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${showSatelliteLayer ? 'border-[#d400ff] text-black bg-[#d400ff]' : 'border-[#d400ff] text-[#d400ff] bg-[#d400ff]/10 animate-pulse'}`}>
+          <Orbit className="w-4 h-4" /> {showSatelliteLayer ? '🔴 SAT: LIVE' : '🛸 SAT TRACKER'}
+        </button>
 
         <button onClick={() => setShowNoFlyPanel(!showNoFlyPanel)}
           className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 ${showNoFlyPanel ? 'border-orange-500 text-black bg-orange-500' : 'border-orange-500 text-orange-500 bg-orange-500/10 hover:bg-orange-500/20'}`}>
