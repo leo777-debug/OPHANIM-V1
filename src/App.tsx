@@ -485,7 +485,7 @@ export default function App() {
                   {[
                     { key: 'aircraft', icon: <Plane className="w-3 h-3" />, label: 'AERIAL' },
                     { key: 'vessel', icon: <Ship className="w-3 h-3" />, label: 'MARITIME' },
-                    { key: 'satellite', icon: <Orbit className="w-3 h-3" />, label: 'ORBITAL' },
+                    { key: 'satellite', icon: <Orbit className="w-3 h-3" />, label: 'SAT TRACK' },
                     { key: 'news', icon: <Globe className="w-3 h-3" />, label: 'EONET' },
                     { key: 'seismic', icon: <Radio className="w-3 h-3" />, label: 'SEISMIC' },
                     { key: 'conflict', icon: <Zap className="w-3 h-3" />, label: 'CONFLICT' },
