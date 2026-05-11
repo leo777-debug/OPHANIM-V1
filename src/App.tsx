@@ -30,6 +30,9 @@ export default function App() {
   const [showInstructions, setShowInstructions] = useState(true);
   const [webcamActive, setWebcamActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [showCamPanel, setShowCamPanel] = useState(false);
+  const [camRegion, setCamRegion] = useState<"mena" | "global">("mena");
+  const [selectedCam, setSelectedCam] = useState(0);
   const [activeTab, setActiveTab] = useState<"streams" | "news" | "cognition">("streams");
   const [layers, setLayers] = useState<MapLayers>({
     aircraft: true, vessel: true, satellite: true, news: true,
@@ -54,6 +57,26 @@ export default function App() {
   const [analysisStatus, setAnalysisStatus] = useState<string>("");
   const liveAircraftRef = useRef<Map<string, IntelligenceEvent>>(new Map());
   const liveShipsRef = useRef<Map<string, IntelligenceEvent>>(new Map());
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const isResizing = useRef(false);
+
+  const startResize = (e: React.MouseEvent) => {
+    isResizing.current = true;
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+    const onMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = Math.min(600, Math.max(200, startWidth + ev.clientX - startX));
+      setSidebarWidth(newWidth);
+    };
+    const onUp = () => {
+      isResizing.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   const addLog = (msg: string) => setLogs(prev => [msg, ...prev].slice(0, 50));
 
@@ -501,14 +524,7 @@ export default function App() {
                 <div className="text-[10px] opacity-50 mt-0.5">Real-time feeds require consistent bandwidth. VPN may interfere.</div>
               </div>
             </div>
-            <div className="border-t border-[#00ff41]/10" />
-            <div className="flex items-start gap-3">
-              <span className="text-lg">📷</span>
-              <div>
-                <div className="font-black text-[#00ff41]">WEBCAM RECOMMENDED</div>
-                <div className="text-[10px] opacity-50 mt-0.5">Enable livecam for operator presence monitoring and analysis feed.</div>
-              </div>
-            </div>
+
           </div>
 
           <button
@@ -528,11 +544,80 @@ export default function App() {
     return <Auth onSuccess={() => { localStorage.setItem("ophanim_demo_access", "true"); setDemoAccess(true); }} />;
   }
 
+  // ── CAMERA DATA ───────────────────────────────────────────────────────────
+  const CAMS = {
+    mena: [
+      { label: "Dubai — Marina", url: "https://www.youtube.com/embed/tDTpEMNADEI?autoplay=1&mute=1" },
+      { label: "Dubai — Burj Khalifa", url: "https://www.youtube.com/embed/RK1K2bzoYmw?autoplay=1&mute=1" },
+      { label: "Mecca — Grand Mosque", url: "https://www.youtube.com/embed/8gODmxdnGQo?autoplay=1&mute=1" },
+      { label: "Istanbul — Bosphorus", url: "https://www.youtube.com/embed/2KgYo8GtSAo?autoplay=1&mute=1" },
+      { label: "Cairo — Nile", url: "https://www.youtube.com/embed/AdqoYkGwSqY?autoplay=1&mute=1" },
+    ],
+    global: [
+      { label: "New York — Times Sq", url: "https://www.youtube.com/embed/1-iSmMGCPbA?autoplay=1&mute=1" },
+      { label: "Tokyo — Shibuya", url: "https://www.youtube.com/embed/3OZHSh5WvgQ?autoplay=1&mute=1" },
+      { label: "London — Tower Bridge", url: "https://www.youtube.com/embed/905BPnDLNXA?autoplay=1&mute=1" },
+      { label: "Paris — Eiffel Tower", url: "https://www.youtube.com/embed/TmRCTHJR7pA?autoplay=1&mute=1" },
+      { label: "Sydney — Harbour", url: "https://www.youtube.com/embed/R4jibFuKCZg?autoplay=1&mute=1" },
+    ],
+  };
+  const activeCams = CAMS[camRegion];
+
   // ── MAIN APP ──────────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen w-screen bg-black text-[#00ff41] font-mono select-none overflow-hidden text-sm uppercase">
       <div className="scanline" />
-      <aside className="w-80 flex flex-col border-r hud-border hud-bg z-10 shrink-0">
+
+      {/* ── FLOATING CAM PANEL ── */}
+      <AnimatePresence>
+        {showCamPanel && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="absolute bottom-16 left-1/2 -translate-x-1/2 z-50 w-[700px] border border-[#00ff41] bg-black/95 shadow-2xl"
+            style={{ boxShadow: '0 0 40px #00ff4133' }}
+          >
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[#00ff41]/30">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-black tracking-widest">📡 LIVECAM FEEDS</span>
+                <div className="flex text-[9px]">
+                  <button onClick={() => { setCamRegion("mena"); setSelectedCam(0); }} className={cn("px-3 py-1 border border-[#00ff41]/30 transition-colors", camRegion === "mena" ? "bg-[#00ff41] text-black font-black" : "opacity-50 hover:opacity-100")}>MENA</button>
+                  <button onClick={() => { setCamRegion("global"); setSelectedCam(0); }} className={cn("px-3 py-1 border border-[#00ff41]/30 transition-colors", camRegion === "global" ? "bg-[#00ff41] text-black font-black" : "opacity-50 hover:opacity-100")}>GLOBAL</button>
+                </div>
+              </div>
+              <button onClick={() => setShowCamPanel(false)} className="text-[#00ff41] hover:text-white text-lg px-2">✕</button>
+            </div>
+            <div className="flex gap-1 p-2 border-b border-[#00ff41]/20 flex-wrap">
+              {activeCams.map((cam, i) => (
+                <button key={i} onClick={() => setSelectedCam(i)} className={cn("text-[9px] px-2 py-1 border transition-colors", selectedCam === i ? "bg-[#00ff41] text-black font-black border-[#00ff41]" : "border-[#00ff41]/20 opacity-50 hover:opacity-100")}>
+                  {cam.label}
+                </button>
+              ))}
+            </div>
+            <div className="relative" style={{ paddingBottom: '56.25%', height: 0 }}>
+              <iframe
+                key={activeCams[selectedCam].url}
+                src={activeCams[selectedCam].url}
+                className="absolute top-0 left-0 w-full h-full"
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                style={{ border: 'none' }}
+              />
+              <div className="absolute top-2 left-2 text-[9px] bg-black/80 px-2 py-1 text-[#00ff41] border border-[#00ff41]/30">
+                ● LIVE — {activeCams[selectedCam].label.toUpperCase()}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <aside className="flex flex-col border-r hud-border hud-bg z-10 shrink-0 relative" style={{ width: sidebarWidth }}>
+        {/* Resize handle */}
+        <div
+          onMouseDown={startResize}
+          className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize z-20 hover:bg-[#00ff41]/40 transition-colors"
+          title="Drag to resize"
+        />
         <div className="p-4 border-b hud-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-[var(--color-brand-primary)]" />
@@ -741,6 +826,12 @@ export default function App() {
             <button onClick={() => setAutoAnalysisActive(!autoAnalysisActive)}
               className={cn("text-[10px] px-2 py-1 border transition-colors", autoAnalysisActive ? "border-[var(--color-brand-primary)] text-[var(--color-brand-primary)]" : "border-gray-600 text-gray-600")}
             >AUTO-MONITOR: {autoAnalysisActive ? "ON" : "OFF"}</button>
+            <button
+              onClick={() => setShowCamPanel(p => !p)}
+              className={cn("text-[10px] px-2 py-1 border transition-colors flex items-center gap-1", showCamPanel ? "bg-[#00ff41] text-black font-black border-[#00ff41]" : "border-[#00ff41]/40 hover:border-[#00ff41]")}
+            >
+              📡 LIVECAM
+            </button>
             <div className="text-[10px] flex items-center gap-1">
               <AlertTriangle className="w-3 h-3 text-yellow-500" /> THREAT MODE: CAUTION
             </div>
