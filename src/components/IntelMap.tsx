@@ -317,6 +317,11 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
           <Plane className="w-4 h-4" /> {showFlightLayer ? '🔴 FLIGHTS: LIVE' : '✈️ FLIGHTS LIVE'}
         </button>
 
+        <button onClick={onToggleSatellites}
+  className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${showSatellites ? 'border-[#d400ff] text-black bg-[#d400ff]' : 'border-[#d400ff] text-[#d400ff] bg-[#d400ff]/10 animate-pulse'}`}>
+  <Orbit className="w-4 h-4" /> {showSatellites ? '🔴 SAT: ON' : '🛸 SAT TRACKER'}
+</button>
+        
         <button onClick={() => setShowSatelliteLayer(!showSatelliteLayer)}
   className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${showSatelliteLayer ? 'border-[#d400ff] text-black bg-[#d400ff]' : 'border-[#d400ff] text-[#d400ff] bg-[#d400ff]/10 animate-pulse'}`}>
   <Orbit className="w-4 h-4" /> {showSatelliteLayer ? '🔴 N2YO: LIVE' : '🛸 N2YO LIVE'}
