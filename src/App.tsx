@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -26,6 +27,9 @@ export type MapLayers = {
 export default function App() {
   const [session, setSession] = useState<any>(null);
   const [demoAccess, setDemoAccess] = useState(() => localStorage.getItem("ophanim_demo_access") === "true");
+  const [showInstructions, setShowInstructions] = useState(true);
+  const [webcamActive, setWebcamActive] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [activeTab, setActiveTab] = useState<"streams" | "news" | "cognition">("streams");
   const [layers, setLayers] = useState<MapLayers>({
     aircraft: true, vessel: true, satellite: true, news: true,
@@ -75,6 +79,29 @@ export default function App() {
     } catch (e) {}
   };
 
+  const startWebcam = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setWebcamActive(true);
+      addLog("LIVECAM: FEED ESTABLISHED.");
+    } catch (e) {
+      addLog("LIVECAM: ACCESS DENIED.");
+    }
+  };
+
+  const stopWebcam = () => {
+    if (videoRef.current?.srcObject) {
+      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      videoRef.current.srcObject = null;
+    }
+    setWebcamActive(false);
+    addLog("LIVECAM: FEED TERMINATED.");
+  };
+
   const handleCSVImport = (file: File) => {
     setIsImporting(true);
     addLog(`INITIATING_CSV_PARSING: ${file.name}`);
@@ -100,7 +127,6 @@ export default function App() {
     });
   };
 
-  // Merge live refs into events state
   const mergeLiveData = () => {
     setEvents(prev => {
       const staticEvents = prev.filter(e => !e.id.startsWith('adsb-') && !e.id.startsWith('ais-'));
@@ -110,7 +136,6 @@ export default function App() {
     });
   };
 
-  // Fetch real aircraft from ADSB.fi via proxy API
   const fetchAircraft = async () => {
     try {
       const resp = await fetch(`${API_BASE}/api/aircraft`);
@@ -173,7 +198,6 @@ export default function App() {
 
       const scrapedEvents: IntelligenceEvent[] = [];
 
-      // NASA EONET
       if (nasaData?.events) {
         nasaData.events.forEach((e: any) => {
           if (e.geometry?.[0]) {
@@ -189,7 +213,6 @@ export default function App() {
         addLog(`EONET: ${nasaData.events.length} ENVIRONMENTAL EVENTS.`);
       }
 
-      // USGS Seismic — ALL magnitudes including micro
       if (quakeData?.features) {
         quakeData.features.forEach((f: any) => {
           const [lng, lat] = f.geometry.coordinates;
@@ -209,7 +232,6 @@ export default function App() {
         addLog(`SEISMIC: ${quakeData.features.length} EVENTS (ALL MAGNITUDES).`);
       }
 
-      // GDELT conflicts
       if (conflictData?.features) {
         conflictData.features.slice(0, 20).forEach((f: any, i: number) => {
           if (f.geometry?.coordinates) {
@@ -226,7 +248,6 @@ export default function App() {
         addLog(`GDELT: ${Math.min(conflictData.features?.length || 0, 20)} CONFLICT NODES.`);
       }
 
-      // NASA FIRMS fires
       if (firmsData) {
         const lines = firmsData.split('\n').slice(1, 20);
         lines.forEach((line: string, i: number) => {
@@ -248,7 +269,6 @@ export default function App() {
         addLog(`FIRMS: ACTIVE FIRE NODES SYNCED.`);
       }
 
-      // N2YO real satellites
       if (satData?.above && satData.above.length > 0) {
         satData.above.forEach((s: any) => {
           const prev = events.find(e => e.id === "n2yo-" + s.satid);
@@ -264,7 +284,6 @@ export default function App() {
         addLog(`N2YO: ${satData.above.length} REAL SATELLITES OVER MENA.`);
       }
 
-      // GPS Jamming
       if (jammingData?.jams) {
         jammingData.jams.forEach((j: any, i: number) => {
           if (j.lat && j.lon) {
@@ -281,7 +300,6 @@ export default function App() {
         addLog(`GPS JAMMING: ${jammingData.jams.length} INTERFERENCE ZONES.`);
       }
 
-      // Internet blackouts
       if (blackoutData?.data) {
         blackoutData.data.slice(0, 5).forEach((b: any, i: number) => {
           if (b.location?.latitude && b.location?.longitude) {
@@ -323,15 +341,13 @@ export default function App() {
     return true;
   });
 
-  // Smooth live movement for satellites and vessels
   useEffect(() => {
     if (events.length === 0) return;
     const moveInterval = setInterval(() => {
       setEvents(prev => prev.map(event => {
         if (event.type === 'satellite') {
-          // Satellites move faster and more predictably
           const dLat = (Math.random() - 0.5) * 0.05;
-          const dLng = (Math.random() - 0.3) * 0.1; // satellites move east mostly
+          const dLng = (Math.random() - 0.3) * 0.1;
           const newPath = [...(event.path || []).slice(-20), [event.lat, event.lng]] as [number,number][];
           return { ...event, lat: event.lat + dLat, lng: event.lng + dLng, path: newPath };
         }
@@ -381,6 +397,7 @@ export default function App() {
   const handleLogout = async () => {
     localStorage.removeItem("ophanim_demo_access");
     setDemoAccess(false);
+    stopWebcam();
     await supabase.auth.signOut();
     addLog("SESSION_TERMINATED.");
   };
@@ -396,9 +413,8 @@ export default function App() {
     fetchIntel();
     fetchAircraft();
     const interval = setInterval(fetchIntel, 60000);
-    const aircraftInterval = setInterval(fetchAircraft, 15000); // Aircraft every 15s
+    const aircraftInterval = setInterval(fetchAircraft, 15000);
 
-    // AISStream WebSocket — real live ships
     let ws: WebSocket | null = null;
     try {
       ws = new WebSocket('wss://stream.aisstream.io/v0/stream');
@@ -449,10 +465,70 @@ export default function App() {
     return () => clearInterval(interval);
   }, [session, autoAnalysisActive, isAnalyzing, events.length]);
 
+  // ── INSTRUCTIONS SCREEN ──────────────────────────────────────────────────
+  if (showInstructions) {
+    return (
+      <div className="flex h-screen w-screen bg-black text-[#00ff41] font-mono items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="border border-[#00ff41] p-10 max-w-lg w-full text-center space-y-6"
+        >
+          <div className="text-[10px] opacity-50 tracking-widest">OPHANIM-V1 ATLAS // PRE-FLIGHT CHECK</div>
+          <div className="text-3xl font-black animate-pulse tracking-tighter">⚠ SYSTEM REQUIREMENTS</div>
+
+          <div className="space-y-3 text-sm text-left border border-[#00ff41]/20 p-5 bg-[#00ff41]/5">
+            <div className="flex items-start gap-3">
+              <span className="text-lg">🖥️</span>
+              <div>
+                <div className="font-black text-[#00ff41]">USE LAPTOP / MONITOR / BIG SCREEN</div>
+                <div className="text-[10px] opacity-50 mt-0.5">Mobile devices not supported. Minimum 1280px width recommended.</div>
+              </div>
+            </div>
+            <div className="border-t border-[#00ff41]/10" />
+            <div className="flex items-start gap-3">
+              <span className="text-lg">🚫</span>
+              <div>
+                <div className="font-black text-[#00ff41]">DISABLE ALL AD BLOCKERS</div>
+                <div className="text-[10px] opacity-50 mt-0.5">Live data streams (ADS-B, AIS, FIRMS) will be blocked. Disable uBlock, AdBlock, Brave Shield, etc.</div>
+              </div>
+            </div>
+            <div className="border-t border-[#00ff41]/10" />
+            <div className="flex items-start gap-3">
+              <span className="text-lg">📡</span>
+              <div>
+                <div className="font-black text-[#00ff41]">STABLE INTERNET CONNECTION</div>
+                <div className="text-[10px] opacity-50 mt-0.5">Real-time feeds require consistent bandwidth. VPN may interfere.</div>
+              </div>
+            </div>
+            <div className="border-t border-[#00ff41]/10" />
+            <div className="flex items-start gap-3">
+              <span className="text-lg">📷</span>
+              <div>
+                <div className="font-black text-[#00ff41]">WEBCAM RECOMMENDED</div>
+                <div className="text-[10px] opacity-50 mt-0.5">Enable livecam for operator presence monitoring and analysis feed.</div>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowInstructions(false)}
+            className="w-full bg-[#00ff41] text-black font-black py-4 text-sm hover:bg-white transition-colors tracking-widest uppercase"
+          >
+            ACKNOWLEDGED — ENTER SYSTEM →
+          </button>
+          <div className="text-[9px] opacity-30">By entering you confirm system requirements are met.</div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ── AUTH SCREEN ───────────────────────────────────────────────────────────
   if (!session && !demoAccess) {
     return <Auth onSuccess={() => { localStorage.setItem("ophanim_demo_access", "true"); setDemoAccess(true); }} />;
   }
 
+  // ── MAIN APP ──────────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen w-screen bg-black text-[#00ff41] font-mono select-none overflow-hidden text-sm uppercase">
       <div className="scanline" />
@@ -568,6 +644,7 @@ export default function App() {
             )}
           </AnimatePresence>
 
+          {/* SYSTEM LOGS */}
           <section className="mt-auto pt-4 flex flex-col min-h-[150px]">
             <div className="flex items-center gap-2 mb-2 text-xs opacity-60">
               <Terminal className="w-3 h-3" /><span>SYSTEM LOGS</span>
@@ -580,6 +657,41 @@ export default function App() {
               ))}
             </div>
           </section>
+
+          {/* LIVECAM */}
+          <div className="pt-3 border-t hud-border">
+            <div className="flex items-center justify-between mb-2 text-[10px] opacity-60">
+              <span className="flex items-center gap-1">📷 LIVECAM</span>
+              {webcamActive && (
+                <span className="text-red-500 animate-pulse font-bold text-[9px]">● REC</span>
+              )}
+            </div>
+            {!webcamActive ? (
+              <button
+                onClick={startWebcam}
+                className="w-full text-[10px] border hud-border p-2 hover:bg-[var(--color-brand-primary)]/10 transition-colors flex items-center justify-center gap-2"
+              >
+                📷 ACTIVATE LIVECAM
+              </button>
+            ) : (
+              <div className="relative">
+                <video
+                  ref={videoRef}
+                  className="w-full border border-[#00ff41]/40"
+                  muted
+                  playsInline
+                  style={{ height: '130px', objectFit: 'cover', transform: 'scaleX(-1)' }}
+                />
+                <div className="absolute top-1 left-1 text-[8px] bg-black/70 px-1 text-[#00ff41]">OPERATOR CAM</div>
+                <button
+                  onClick={stopWebcam}
+                  className="absolute top-1 right-1 text-[9px] bg-red-900/80 px-1 text-red-400 hover:bg-red-700 transition-colors"
+                >
+                  ✕ END
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="p-4 border-t hud-border flex items-center justify-between text-[10px]">
