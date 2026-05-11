@@ -103,8 +103,8 @@ interface IntelMapProps {
   events: IntelligenceEvent[];
   selectedEvent: IntelligenceEvent | null;
   onEventClick: (event: IntelligenceEvent) => void;
-  showSatellites: boolean;
-  onToggleSatellites: () => void;
+  showSatellites?: boolean;
+  onToggleSatellites?: () => void;
 }
 
 export default function IntelMap({ events, selectedEvent, onEventClick }: IntelMapProps) {
