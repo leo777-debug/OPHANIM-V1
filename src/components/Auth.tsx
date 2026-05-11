@@ -13,68 +13,44 @@ export default function Auth({ onSuccess }: AuthProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
 
-    setLoading(true);
-    setError(null);
+  try {
+    // Check if already registered with this email
+    const { data: existing } = await supabase
+      .from('operators')
+      .select('email')
+      .eq('email', email)
+      .single();
 
-    // Safety transition in case of total failure
-    const safetyTimeout = setTimeout(() => {
+    if (existing) {
+      // Already registered — just let them in!
       setLoading(false);
       onSuccess();
-    }, 5000);
-
-    try {
-      // 1. Check if we are using placeholder credentials
-      const isPlaceholder = supabase.auth.getSession ? false : true; 
-      // Actually the client is initialized. Let's check the URL.
-      if ((supabase as any).supabaseUrl?.includes('placeholder')) {
-        throw new Error("SUPABASE_CREDENTIALS_MISSING: You must set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Secrets panel.");
-      }
-
-      // 1. Establish anonymous session
-      const { error: authError } = await supabase.auth.signInAnonymously();
-      if (authError) throw authError;
-
-      // 2. Record data in Supabase table
-      const { error: insertError } = await supabase.from('operators').insert([{ name, email }]);
-      
-      if (insertError) {
-        console.error("Supabase insert failed:", insertError);
-        setError(`DATABASE_ERROR: ${insertError.message}. Make sure the 'operators' table exists with 'name' and 'email' columns and RLS allows inserts.`);
-        setLoading(false);
-        clearTimeout(safetyTimeout);
-        return;
-      }
-      
-      console.log("Operator record saved successfully");
-      localStorage.setItem("ophanim_registration_ts", Date.now().toString());
-      setError("SESSION_INITIALIZED: DATABASE_SYNC_SUCCESS.");
-      await new Promise(r => setTimeout(r, 1000));
-      
-      clearTimeout(safetyTimeout);
-      setLoading(false);
-      onSuccess();
-    } catch (err: any) {
-      console.error("Initialization error:", err);
-      // Give more specific feedback for "Failed to fetch"
-      const message = err.message === 'Failed to fetch' 
-        ? "CONNECTION_FAILURE: Could not reach Supabase edge. Check if your project is paused or secrets are correctly set."
-        : err.message;
-      
-      setError(`FATAL_ERROR: ${message}`);
-      setLoading(false);
-      
-      // Add a small delay then allow manual override if they just want to see the demo
-      setTimeout(() => {
-        if (loading) {
-           setError(`FATAL_ERROR: ${message}. Click again to bypass sync.`);
-        }
-      }, 2000);
+      return;
     }
-  };
 
+    // New signup — insert record
+    const { error: insertError } = await supabase
+      .from('operators')
+      .insert([{ name, email }]);
+
+    if (insertError) {
+      setError(`DATABASE_ERROR: ${insertError.message}`);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(false);
+    onSuccess();
+  } catch (err: any) {
+    setError(`FATAL_ERROR: ${err.message}`);
+    setLoading(false);
+  }
+};
   const handleBypass = () => {
     setLoading(false);
     onSuccess();
