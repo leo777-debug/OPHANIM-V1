@@ -51,10 +51,7 @@ export default function Auth({ onSuccess }: AuthProps) {
     setLoading(false);
   }
 };
-  const handleBypass = () => {
-    setLoading(false);
-    onSuccess();
-  };
+
 
   return (
     <div className="min-h-screen bg-black text-[#00ff41] font-mono flex flex-col items-center justify-center p-4 relative overflow-hidden">
