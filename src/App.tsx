@@ -547,18 +547,18 @@ export default function App() {
   // ── CAMERA DATA ───────────────────────────────────────────────────────────
   const CAMS = {
     mena: [
-      { label: "Dubai — Marina", url: "https://www.youtube.com/embed/tDTpEMNADEI?autoplay=1&mute=1" },
-      { label: "Dubai — Burj Khalifa", url: "https://www.youtube.com/embed/RK1K2bzoYmw?autoplay=1&mute=1" },
-      { label: "Mecca — Grand Mosque", url: "https://www.youtube.com/embed/8gODmxdnGQo?autoplay=1&mute=1" },
-      { label: "Istanbul — Bosphorus", url: "https://www.youtube.com/embed/2KgYo8GtSAo?autoplay=1&mute=1" },
-      { label: "Cairo — Nile", url: "https://www.youtube.com/embed/AdqoYkGwSqY?autoplay=1&mute=1" },
+      { label: "Dubai — Traffic", url: "https://www.insecam.org/en/view/576584/" },
+      { label: "Istanbul — Bosphorus", url: "https://www.skylinewebcams.com/en/webcam/turkiye/istanbul/istanbul/istanbul-bosphorus.html" },
+      { label: "Cairo — Tahrir Sq", url: "https://www.earthcam.com/world/egypt/cairo/?cam=cairo" },
+      { label: "Beirut — Port", url: "https://www.skylinewebcams.com/en/webcam/liban/beyrouth/beyrouth/beirut-port.html" },
+      { label: "Amman — City", url: "https://www.skylinewebcams.com/en/webcam/jordan/amman/amman/amman-city.html" },
     ],
     global: [
-      { label: "New York — Times Sq", url: "https://www.youtube.com/embed/1-iSmMGCPbA?autoplay=1&mute=1" },
-      { label: "Tokyo — Shibuya", url: "https://www.youtube.com/embed/3OZHSh5WvgQ?autoplay=1&mute=1" },
-      { label: "London — Tower Bridge", url: "https://www.youtube.com/embed/905BPnDLNXA?autoplay=1&mute=1" },
-      { label: "Paris — Eiffel Tower", url: "https://www.youtube.com/embed/TmRCTHJR7pA?autoplay=1&mute=1" },
-      { label: "Sydney — Harbour", url: "https://www.youtube.com/embed/R4jibFuKCZg?autoplay=1&mute=1" },
+      { label: "New York — Times Sq", url: "https://www.earthcam.com/usa/newyork/timessquare/?cam=tsrobo1" },
+      { label: "Tokyo — Shibuya", url: "https://www.earthcam.com/japan/tokyo/shibuya/?cam=shibuya" },
+      { label: "London — Trafalgar", url: "https://www.earthcam.com/world/england/london/?cam=london_metropole" },
+      { label: "Paris — Eiffel", url: "https://www.earthcam.com/world/france/paris/?cam=eiffel_tower" },
+      { label: "Sydney — Harbour", url: "https://www.earthcam.com/world/australia/sydney/?cam=sydney" },
     ],
   };
   const activeCams = CAMS[camRegion];
@@ -595,7 +595,7 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <div className="relative" style={{ paddingBottom: '56.25%', height: 0 }}>
+            <div className="relative bg-black" style={{ height: '380px' }}>
               <iframe
                 key={activeCams[selectedCam].url}
                 src={activeCams[selectedCam].url}
@@ -604,9 +604,17 @@ export default function App() {
                 allowFullScreen
                 style={{ border: 'none' }}
               />
-              <div className="absolute top-2 left-2 text-[9px] bg-black/80 px-2 py-1 text-[#00ff41] border border-[#00ff41]/30">
+              <div className="absolute top-2 left-2 text-[9px] bg-black/80 px-2 py-1 text-[#00ff41] border border-[#00ff41]/30 pointer-events-none">
                 ● LIVE — {activeCams[selectedCam].label.toUpperCase()}
               </div>
+              <a
+                href={activeCams[selectedCam].url}
+                target="_blank"
+                rel="noreferrer"
+                className="absolute bottom-2 right-2 text-[9px] bg-black/80 px-2 py-1 text-[#00ff41] border border-[#00ff41]/30 hover:bg-[#00ff41] hover:text-black transition-colors"
+              >
+                ↗ OPEN IN NEW TAB
+              </a>
             </div>
           </motion.div>
         )}
