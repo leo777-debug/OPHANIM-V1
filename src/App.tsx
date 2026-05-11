@@ -1,4 +1,3 @@
-'use client';
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -28,11 +27,6 @@ export default function App() {
   const [session, setSession] = useState<any>(null);
   const [demoAccess, setDemoAccess] = useState(() => localStorage.getItem("ophanim_demo_access") === "true");
   const [showInstructions, setShowInstructions] = useState(true);
-  const [webcamActive, setWebcamActive] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [showCamPanel, setShowCamPanel] = useState(false);
-  const [camRegion, setCamRegion] = useState<"mena" | "global">("mena");
-  const [selectedCam, setSelectedCam] = useState(0);
   const [activeTab, setActiveTab] = useState<"streams" | "news" | "cognition">("streams");
   const [layers, setLayers] = useState<MapLayers>({
     aircraft: true, vessel: true, satellite: true, news: true,
@@ -66,8 +60,7 @@ export default function App() {
     const startWidth = sidebarWidth;
     const onMove = (ev: MouseEvent) => {
       if (!isResizing.current) return;
-      const newWidth = Math.min(600, Math.max(200, startWidth + ev.clientX - startX));
-      setSidebarWidth(newWidth);
+      setSidebarWidth(Math.min(600, Math.max(200, startWidth + ev.clientX - startX)));
     };
     const onUp = () => {
       isResizing.current = false;
@@ -100,29 +93,6 @@ export default function App() {
       playBeep(880, 0.3, 0.1);
       playBeep(440, 0.45, 0.3);
     } catch (e) {}
-  };
-
-  const startWebcam = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setWebcamActive(true);
-      addLog("LIVECAM: FEED ESTABLISHED.");
-    } catch (e) {
-      addLog("LIVECAM: ACCESS DENIED.");
-    }
-  };
-
-  const stopWebcam = () => {
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
-      videoRef.current.srcObject = null;
-    }
-    setWebcamActive(false);
-    addLog("LIVECAM: FEED TERMINATED.");
   };
 
   const handleCSVImport = (file: File) => {
@@ -172,8 +142,7 @@ export default function App() {
             a.squawk === '7700' || a.squawk === '7600' || a.squawk === '7500';
           if (isMilitary) milCount++;
           const event: IntelligenceEvent = {
-            id: "adsb-" + a.hex,
-            type: "aircraft",
+            id: "adsb-" + a.hex, type: "aircraft",
             lat: a.lat, lng: a.lon,
             label: isMilitary ? `⚡ MIL: ${a.flight?.trim() || a.hex}` : (a.flight?.trim() || a.hex || "UNID"),
             intensity: isMilitary ? 0.9 : 0.3,
@@ -283,7 +252,7 @@ export default function App() {
                 id: "firms-" + i, type: "news", lat, lng,
                 label: `🔥 FIRE: Brightness ${brightness}K`,
                 intensity: Math.min(brightness / 400, 1.0),
-                details: `NASA FIRMS active fire. Brightness: ${brightness}K. Satellite: VIIRS. Could indicate strike aftermath, oil fire, or wildfire.`,
+                details: `NASA FIRMS active fire. Brightness: ${brightness}K. Satellite: VIIRS.`,
                 timestamp: new Date().toISOString()
               });
             }
@@ -315,7 +284,7 @@ export default function App() {
               lat: j.lat, lng: j.lon,
               label: `📡 GPS JAM: ${j.location || 'Unknown'}`,
               intensity: 0.8,
-              details: `GPS jamming/spoofing detected! Location: ${j.location || 'Unknown'}. Level: ${j.level || 'High'}. Active electronic warfare detected in this area.`,
+              details: `GPS jamming/spoofing detected! Location: ${j.location || 'Unknown'}. Level: ${j.level || 'High'}.`,
               timestamp: new Date().toISOString()
             });
           }
@@ -331,7 +300,7 @@ export default function App() {
               lat: b.location.latitude, lng: b.location.longitude,
               label: `🌐 BLACKOUT: ${b.entity?.name || 'Unknown'}`,
               intensity: 0.6,
-              details: `Internet outage detected! Entity: ${b.entity?.name}. Country: ${b.location?.country}. Could indicate military/government action.`,
+              details: `Internet outage detected! Entity: ${b.entity?.name}. Country: ${b.location?.country}.`,
               timestamp: new Date().toISOString()
             });
           }
@@ -420,7 +389,6 @@ export default function App() {
   const handleLogout = async () => {
     localStorage.removeItem("ophanim_demo_access");
     setDemoAccess(false);
-    stopWebcam();
     await supabase.auth.signOut();
     addLog("SESSION_TERMINATED.");
   };
@@ -524,7 +492,6 @@ export default function App() {
                 <div className="text-[10px] opacity-50 mt-0.5">Real-time feeds require consistent bandwidth. VPN may interfere.</div>
               </div>
             </div>
-
           </div>
 
           <button
@@ -544,88 +511,15 @@ export default function App() {
     return <Auth onSuccess={() => { localStorage.setItem("ophanim_demo_access", "true"); setDemoAccess(true); }} />;
   }
 
-  // ── CAMERA DATA ───────────────────────────────────────────────────────────
-  const CAMS = {
-    mena: [
-      { label: "Dubai — Traffic", url: "https://www.insecam.org/en/view/576584/" },
-      { label: "Istanbul — Bosphorus", url: "https://www.skylinewebcams.com/en/webcam/turkiye/istanbul/istanbul/istanbul-bosphorus.html" },
-      { label: "Cairo — Tahrir Sq", url: "https://www.earthcam.com/world/egypt/cairo/?cam=cairo" },
-      { label: "Beirut — Port", url: "https://www.skylinewebcams.com/en/webcam/liban/beyrouth/beyrouth/beirut-port.html" },
-      { label: "Amman — City", url: "https://www.skylinewebcams.com/en/webcam/jordan/amman/amman/amman-city.html" },
-    ],
-    global: [
-      { label: "New York — Times Sq", url: "https://www.earthcam.com/usa/newyork/timessquare/?cam=tsrobo1" },
-      { label: "Tokyo — Shibuya", url: "https://www.earthcam.com/japan/tokyo/shibuya/?cam=shibuya" },
-      { label: "London — Trafalgar", url: "https://www.earthcam.com/world/england/london/?cam=london_metropole" },
-      { label: "Paris — Eiffel", url: "https://www.earthcam.com/world/france/paris/?cam=eiffel_tower" },
-      { label: "Sydney — Harbour", url: "https://www.earthcam.com/world/australia/sydney/?cam=sydney" },
-    ],
-  };
-  const activeCams = CAMS[camRegion];
-
   // ── MAIN APP ──────────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen w-screen bg-black text-[#00ff41] font-mono select-none overflow-hidden text-sm uppercase">
       <div className="scanline" />
 
-      {/* ── FLOATING CAM PANEL ── */}
-      <AnimatePresence>
-        {showCamPanel && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="absolute bottom-16 left-1/2 -translate-x-1/2 z-50 w-[700px] border border-[#00ff41] bg-black/95 shadow-2xl"
-            style={{ boxShadow: '0 0 40px #00ff4133' }}
-          >
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[#00ff41]/30">
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-black tracking-widest">📡 LIVECAM FEEDS</span>
-                <div className="flex text-[9px]">
-                  <button onClick={() => { setCamRegion("mena"); setSelectedCam(0); }} className={cn("px-3 py-1 border border-[#00ff41]/30 transition-colors", camRegion === "mena" ? "bg-[#00ff41] text-black font-black" : "opacity-50 hover:opacity-100")}>MENA</button>
-                  <button onClick={() => { setCamRegion("global"); setSelectedCam(0); }} className={cn("px-3 py-1 border border-[#00ff41]/30 transition-colors", camRegion === "global" ? "bg-[#00ff41] text-black font-black" : "opacity-50 hover:opacity-100")}>GLOBAL</button>
-                </div>
-              </div>
-              <button onClick={() => setShowCamPanel(false)} className="text-[#00ff41] hover:text-white text-lg px-2">✕</button>
-            </div>
-            <div className="flex gap-1 p-2 border-b border-[#00ff41]/20 flex-wrap">
-              {activeCams.map((cam, i) => (
-                <button key={i} onClick={() => setSelectedCam(i)} className={cn("text-[9px] px-2 py-1 border transition-colors", selectedCam === i ? "bg-[#00ff41] text-black font-black border-[#00ff41]" : "border-[#00ff41]/20 opacity-50 hover:opacity-100")}>
-                  {cam.label}
-                </button>
-              ))}
-            </div>
-            <div className="relative bg-black" style={{ height: '380px' }}>
-              <iframe
-                key={activeCams[selectedCam].url}
-                src={activeCams[selectedCam].url}
-                className="absolute top-0 left-0 w-full h-full"
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-                style={{ border: 'none' }}
-              />
-              <div className="absolute top-2 left-2 text-[9px] bg-black/80 px-2 py-1 text-[#00ff41] border border-[#00ff41]/30 pointer-events-none">
-                ● LIVE — {activeCams[selectedCam].label.toUpperCase()}
-              </div>
-              <a
-                href={activeCams[selectedCam].url}
-                target="_blank"
-                rel="noreferrer"
-                className="absolute bottom-2 right-2 text-[9px] bg-black/80 px-2 py-1 text-[#00ff41] border border-[#00ff41]/30 hover:bg-[#00ff41] hover:text-black transition-colors"
-              >
-                ↗ OPEN IN NEW TAB
-              </a>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       <aside className="flex flex-col border-r hud-border hud-bg z-10 shrink-0 relative" style={{ width: sidebarWidth }}>
         {/* Resize handle */}
-        <div
-          onMouseDown={startResize}
-          className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize z-20 hover:bg-[#00ff41]/40 transition-colors"
-          title="Drag to resize"
-        />
+        <div onMouseDown={startResize} className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize z-20 hover:bg-[#00ff41]/40 transition-colors" />
+
         <div className="p-4 border-b hud-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-[var(--color-brand-primary)]" />
@@ -737,7 +631,6 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          {/* SYSTEM LOGS */}
           <section className="mt-auto pt-4 flex flex-col min-h-[150px]">
             <div className="flex items-center gap-2 mb-2 text-xs opacity-60">
               <Terminal className="w-3 h-3" /><span>SYSTEM LOGS</span>
@@ -750,41 +643,6 @@ export default function App() {
               ))}
             </div>
           </section>
-
-          {/* LIVECAM */}
-          <div className="pt-3 border-t hud-border">
-            <div className="flex items-center justify-between mb-2 text-[10px] opacity-60">
-              <span className="flex items-center gap-1">📷 LIVECAM</span>
-              {webcamActive && (
-                <span className="text-red-500 animate-pulse font-bold text-[9px]">● REC</span>
-              )}
-            </div>
-            {!webcamActive ? (
-              <button
-                onClick={startWebcam}
-                className="w-full text-[10px] border hud-border p-2 hover:bg-[var(--color-brand-primary)]/10 transition-colors flex items-center justify-center gap-2"
-              >
-                📷 ACTIVATE LIVECAM
-              </button>
-            ) : (
-              <div className="relative">
-                <video
-                  ref={videoRef}
-                  className="w-full border border-[#00ff41]/40"
-                  muted
-                  playsInline
-                  style={{ height: '130px', objectFit: 'cover', transform: 'scaleX(-1)' }}
-                />
-                <div className="absolute top-1 left-1 text-[8px] bg-black/70 px-1 text-[#00ff41]">OPERATOR CAM</div>
-                <button
-                  onClick={stopWebcam}
-                  className="absolute top-1 right-1 text-[9px] bg-red-900/80 px-1 text-red-400 hover:bg-red-700 transition-colors"
-                >
-                  ✕ END
-                </button>
-              </div>
-            )}
-          </div>
         </div>
 
         <div className="p-4 border-t hud-border flex items-center justify-between text-[10px]">
@@ -834,12 +692,6 @@ export default function App() {
             <button onClick={() => setAutoAnalysisActive(!autoAnalysisActive)}
               className={cn("text-[10px] px-2 py-1 border transition-colors", autoAnalysisActive ? "border-[var(--color-brand-primary)] text-[var(--color-brand-primary)]" : "border-gray-600 text-gray-600")}
             >AUTO-MONITOR: {autoAnalysisActive ? "ON" : "OFF"}</button>
-            <button
-              onClick={() => setShowCamPanel(p => !p)}
-              className={cn("text-[10px] px-2 py-1 border transition-colors flex items-center gap-1", showCamPanel ? "bg-[#00ff41] text-black font-black border-[#00ff41]" : "border-[#00ff41]/40 hover:border-[#00ff41]")}
-            >
-              📡 LIVECAM
-            </button>
             <div className="text-[10px] flex items-center gap-1">
               <AlertTriangle className="w-3 h-3 text-yellow-500" /> THREAT MODE: CAUTION
             </div>
@@ -896,7 +748,6 @@ export default function App() {
                       <div className="mt-2 text-[8px] text-[var(--color-brand-primary)] opacity-70">✅ GIBS SATELLITE IMAGERY ANALYZED</div>
                     )}
                   </div>
-
                   <div className="space-y-2">
                     <div className="text-[10px] opacity-60 font-black">EVIDENCE TRAIL:</div>
                     {Array.isArray(analysis?.evidence) ? analysis.evidence.map((ev, i) => (
@@ -905,7 +756,6 @@ export default function App() {
                       </div>
                     )) : <div className="text-[10px] opacity-40">No evidence detected.</div>}
                   </div>
-
                   <div className="bg-[var(--color-brand-primary)] text-black p-4">
                     <div className="text-[10px] font-black mb-1 underline">TACTICAL_RECOMMENDATION:</div>
                     <p className="text-xs font-bold leading-tight uppercase italic">{analysis?.recommendation || "CONTINUE MONITORING"}</p>
