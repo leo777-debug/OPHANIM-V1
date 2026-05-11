@@ -612,7 +612,13 @@ export default function App() {
 
       <main className="flex-1 relative flex flex-col shrink min-w-0">
         <div className="flex-1 min-h-0">
-          <IntelMap events={filteredEvents} selectedEvent={selectedEvent} onEventClick={setSelectedEvent} />
+         <IntelMap 
+  events={filteredEvents} 
+  selectedEvent={selectedEvent} 
+  onEventClick={setSelectedEvent}
+  showSatellites={layers.satellite}
+  onToggleSatellites={() => setLayers(l => ({ ...l, satellite: !l.satellite }))}
+/>
         </div>
         <div className="h-12 border-t hud-border hud-bg flex items-center px-4 justify-between shrink-0">
           <div className="flex items-center gap-4">
