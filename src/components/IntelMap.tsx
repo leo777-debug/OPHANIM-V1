@@ -347,6 +347,10 @@ const heatLayerRef = useRef<any>(null);
           <Plane className="w-4 h-4" /> 🚫 NO-FLY ZONES
         </button>
 
+        <button onClick={() => setShowHeatmap(!showHeatmap)}
+  className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 ${showHeatmap ? 'border-red-500 text-black bg-red-500' : 'border-red-500 text-red-500 bg-red-500/10 hover:bg-red-500/20'}`}>
+  🔥 {showHeatmap ? 'HEATMAP: ON' : 'HEATMAP: OFF'}
+</button>
         <button onClick={() => setShowJammingPanel(!showJammingPanel)}
           className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 ${showJammingPanel ? 'border-yellow-500 text-black bg-yellow-500' : 'border-yellow-500 text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20'}`}>
           <Radio className="w-4 h-4" /> 📡 GPS JAMMING
