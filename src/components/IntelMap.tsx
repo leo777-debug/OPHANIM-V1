@@ -112,36 +112,39 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
   const [showGibsPanel, setShowGibsPanel] = useState(false);
   const [showNoFlyPanel, setShowNoFlyPanel] = useState(false);
   const [showJammingPanel, setShowJammingPanel] = useState(false);
-  const [showHeatmap, setShowHeatmap] = useState(false);
-const mapRef = useRef<any>(null);
-const heatLayerRef = useRef<any>(null);
-useEffect(() => {
-  const map = mapRef.current;
-  if (!map) return;
-  const L = (window as any).L;
-  if (!L?.heatLayer) return;
-  if (heatLayerRef.current) {
-    try { map.removeLayer(heatLayerRef.current); } catch(e) {}
-    heatLayerRef.current = null;
-  }
-  if (!showHeatmap || events.length === 0) return;
-  const points = events
-    .filter(e => e.lat && e.lng)
-    .map(e => [e.lat, e.lng, e.intensity || 0.5] as [number, number, number]);
-  if (points.length === 0) return;
-  heatLayerRef.current = L.heatLayer(points, {
-    radius: 40,
-    blur: 30,
-    maxZoom: 12,
-    max: 1.0,
-    gradient: {
-      0.2: '#00ff41',
-      0.5: '#ffaa00',
-      0.8: '#ff4444',
-      1.0: '#ff0000'
+ const [showHeatmap, setShowHeatmap] = useState(false);
+  const mapRef = useRef<any>(null);
+  const heatLayerRef = useRef<any>(null);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const L = (window as any).L;
+    if (!L?.heatLayer) return;
+    if (heatLayerRef.current) {
+      try { map.removeLayer(heatLayerRef.current); } catch(e) {}
+      heatLayerRef.current = null;
     }
-  }).addTo(map);
-}, [showHeatmap, events]);
+    if (!showHeatmap || events.length === 0) return;
+    const points = events
+      .filter(e => e.lat && e.lng)
+      .map(e => [e.lat, e.lng, e.intensity || 0.5] as [number, number, number]);
+    if (points.length === 0) return;
+    heatLayerRef.current = L.heatLayer(points, {
+      radius: 40,
+      blur: 30,
+      maxZoom: 12,
+      max: 1.0,
+      gradient: {
+        0.2: '#00ff41',
+        0.5: '#ffaa00',
+        0.8: '#ff4444',
+        1.0: '#ff0000'
+      }
+    }).addTo(map);
+  }, [showHeatmap, events]);
+
+  const [showInstructions, setShowInstructions] = useState(true);
   const points = events
     .filter(e => e.intensity > 0.3)
     .map(e => [e.lat, e.lng, e.intensity]);
