@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -29,6 +29,7 @@ const GIBS_LAYERS = [
   { id: 'aod', name: 'SMOKE/DUST', url: (date: string) => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=MODIS_Terra_Aerosol&FORMAT=image/png&WIDTH=1200&HEIGHT=800&CRS=CRS:84&BBOX=25,10,65,45&TIME=${date}` },
 ];
 
+// Draggable resizable panel component
 function DraggablePanel({ title, color, onClose, children, defaultPos, defaultSize }: {
   title: string; color: string; onClose: () => void;
   children: React.ReactNode;
@@ -77,6 +78,7 @@ function DraggablePanel({ title, color, onClose, children, defaultPos, defaultSi
       className="absolute z-[2000] flex flex-col"
       style={{ left: actualPos.x, top: actualPos.y, width: actualSize.w, height: actualSize.h, border: `2px solid ${color}`, background: 'rgba(0,0,0,0.97)', boxShadow: `0 0 30px ${color}44`, resize: maximized ? 'none' : 'both', overflow: 'hidden', minWidth: 300, minHeight: 200 }}
     >
+      {/* Title bar - drag handle */}
       <div
         onMouseDown={onMouseDown}
         className="flex items-center justify-between px-3 py-2 cursor-move shrink-0 select-none"
@@ -91,6 +93,7 @@ function DraggablePanel({ title, color, onClose, children, defaultPos, defaultSi
         </div>
       </div>
       <div className="flex-1 overflow-auto">{children}</div>
+      {/* Resize hint */}
       {!maximized && <div className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize opacity-30" style={{ borderRight: `2px solid ${color}`, borderBottom: `2px solid ${color}` }} />}
     </div>
   );
@@ -109,39 +112,14 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
   const [showGibsPanel, setShowGibsPanel] = useState(false);
   const [showNoFlyPanel, setShowNoFlyPanel] = useState(false);
   const [showJammingPanel, setShowJammingPanel] = useState(false);
-  const [showHeatmap, setShowHeatmap] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
   const [gibsLayer, setGibsLayer] = useState(0);
   const [gibsDate, setGibsDate] = useState(new Date(Date.now() - 86400000).toISOString().split('T')[0]);
   const [gibsZoom, setGibsZoom] = useState(1);
-  const mapRef = useRef<any>(null);
-  const heatLayerRef = useRef<any>(null);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const Win = window as any;
-    if (!Win.L?.heatLayer) return;
-    if (heatLayerRef.current) {
-      try { map.removeLayer(heatLayerRef.current); } catch(e) {}
-      heatLayerRef.current = null;
-    }
-    if (!showHeatmap || events.length === 0) return;
-    const points = events
-      .filter(e => e.lat && e.lng)
-      .map(e => [e.lat, e.lng, e.intensity || 0.5] as [number, number, number]);
-    if (points.length === 0) return;
-    heatLayerRef.current = Win.L.heatLayer(points, {
-      radius: 40,
-      blur: 30,
-      maxZoom: 12,
-      max: 1.0,
-      gradient: { 0.2: '#00ff41', 0.5: '#ffaa00', 0.8: '#ff4444', 1.0: '#ff0000' }
-    }).addTo(map);
-  }, [showHeatmap, events]);
 
   return (
     <div className="relative w-full h-full bg-black">
+      {/* INSTRUCTIONS MODAL */}
       {showInstructions && (
         <div className="absolute inset-0 z-[3000] flex items-center justify-center bg-black/90 backdrop-blur-sm">
           <div className="max-w-lg w-full mx-4 border-2 border-[#00ff41] bg-black p-6 shadow-[0_0_40px_rgba(0,255,65,0.3)] max-h-[90vh] overflow-y-auto">
@@ -164,7 +142,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
               </div>
               <div className="border border-[#00ff41]/30 p-3 bg-[#00ff41]/5">
                 <div className="font-black text-[#00ff41] mb-1">🛰️ PANELS</div>
-                GIBS, GPS JAM, NO-FLY panels are draggable and resizable
+                GIBS, GPS JAM, NO-FLY panels are draggable and resizable — drag title bar to move, drag bottom-right corner to resize
               </div>
               <div className="border border-yellow-500/30 p-3 bg-yellow-500/5">
                 <div className="font-black text-yellow-500 mb-1">⚠️ ALERTS</div>
@@ -182,6 +160,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         </div>
       )}
 
+      {/* DRAGGABLE GIBS PANEL */}
       {showGibsPanel && (
         <DraggablePanel title="🛰️ NASA GIBS SATELLITE IMAGERY — MENA REGION" color="#d400ff" onClose={() => setShowGibsPanel(false)} defaultPos={{ x: 60, y: 60 }} defaultSize={{ w: 600, h: 500 }}>
           <div className="p-2 flex gap-1 flex-wrap border-b border-[#d400ff]/20">
@@ -212,6 +191,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         </DraggablePanel>
       )}
 
+      {/* DRAGGABLE NO-FLY ZONES PANEL */}
       {showNoFlyPanel && (
         <DraggablePanel title="🚫 NO-FLY ZONES & NOTAM — MENA" color="#f97316" onClose={() => setShowNoFlyPanel(false)} defaultPos={{ x: 60, y: 400 }} defaultSize={{ w: 420, h: 380 }}>
           <div className="p-3 text-[11px] font-mono overflow-y-auto h-full">
@@ -239,18 +219,21 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         </DraggablePanel>
       )}
 
+      {/* DRAGGABLE GPS JAMMING PANEL */}
       {showJammingPanel && (
         <DraggablePanel title="📡 GPS JAMMING/SPOOFING — LIVE" color="#eab308" onClose={() => setShowJammingPanel(false)} defaultPos={{ x: 500, y: 400 }} defaultSize={{ w: 500, h: 380 }}>
           <iframe src="https://gpsjam.org/?lat=25&lon=45&z=5" className="w-full h-full border-0" title="GPS Jamming" />
         </DraggablePanel>
       )}
 
+      {/* DRAGGABLE SATELLITE LIVE PANEL */}
       {showSatelliteLayer && (
         <DraggablePanel title="🛰️ LIVE SATELLITE TRACKER — N2YO" color="#d400ff" onClose={() => setShowSatelliteLayer(false)} defaultPos={{ x: 300, y: 60 }} defaultSize={{ w: 500, h: 420 }}>
           <iframe src="https://www.n2yo.com/passes/?s=25544" className="w-full h-full border-0" title="Live Satellites" />
         </DraggablePanel>
       )}
 
+      {/* VesselFinder overlay */}
       {showVesselLayer && (
         <div className="absolute inset-0 z-[900]">
           <iframe src="https://www.vesselfinder.com/aismap?zoom=6&lat=25&lon=55&width=100%25&height=100%25&names=true&fleet=false"
@@ -258,6 +241,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         </div>
       )}
 
+      {/* ADSBExchange overlay */}
       {showFlightLayer && (
         <div className="absolute inset-0 z-[850]">
           <iframe src="https://globe.adsbexchange.com/?lat=25&lon=50&zoom=5"
@@ -273,13 +257,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         </div>
       )}
 
-      <MapContainer
-        center={[24.0, 50.0]}
-        zoom={5}
-        className="w-full h-full"
-        zoomControl={false}
-        ref={(map: any) => { if (map) mapRef.current = map; }}
-      >
+      <MapContainer center={[24.0, 50.0]} zoom={5} className="w-full h-full" zoomControl={false}>
         <TileLayer
           attribution='&copy; OpenStreetMap contributors &copy; CARTO'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -313,6 +291,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         })}
       </MapContainer>
 
+      {/* RIGHT SIDE BUTTONS */}
       <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
         <div className="hud-bg hud-border p-2 text-[10px] uppercase text-[var(--color-brand-primary)]">Grid: Active</div>
         <div className="hud-bg hud-border p-2 text-[10px] uppercase text-[#555]">Sat: Offline</div>
@@ -337,18 +316,13 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
         </button>
 
         <button onClick={() => setShowSatelliteLayer(!showSatelliteLayer)}
-          className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${showSatelliteLayer ? 'border-[#d400ff] text-black bg-[#d400ff]' : 'border-[#d400ff] text-[#d400ff] bg-[#d400ff]/10 animate-pulse'}`}>
-          <Orbit className="w-4 h-4" /> {showSatelliteLayer ? '🔴 N2YO: LIVE' : '🛸 N2YO LIVE'}
-        </button>
+  className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 shadow-lg ${showSatelliteLayer ? 'border-[#d400ff] text-black bg-[#d400ff]' : 'border-[#d400ff] text-[#d400ff] bg-[#d400ff]/10 animate-pulse'}`}>
+  <Orbit className="w-4 h-4" /> {showSatelliteLayer ? '🔴 N2YO: LIVE' : '🛸 N2YO LIVE'}
+</button>
 
         <button onClick={() => setShowNoFlyPanel(!showNoFlyPanel)}
           className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 ${showNoFlyPanel ? 'border-orange-500 text-black bg-orange-500' : 'border-orange-500 text-orange-500 bg-orange-500/10 hover:bg-orange-500/20'}`}>
           <Plane className="w-4 h-4" /> 🚫 NO-FLY ZONES
-        </button>
-
-        <button onClick={() => setShowHeatmap(!showHeatmap)}
-          className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 ${showHeatmap ? 'border-red-500 text-black bg-red-500' : 'border-red-500 text-red-500 bg-red-500/10 hover:bg-red-500/20'}`}>
-          🔥 {showHeatmap ? 'HEATMAP: ON' : 'HEATMAP: OFF'}
         </button>
 
         <button onClick={() => setShowJammingPanel(!showJammingPanel)}
