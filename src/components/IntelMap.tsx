@@ -115,7 +115,7 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
   const [showHeatmap, setShowHeatmap] = useState(false);
 const mapRef = useRef<any>(null);
 const heatLayerRef = useRef<any>(null);
-  useEffect(() => {
+useEffect(() => {
   const map = mapRef.current;
   if (!map) return;
   const L = (window as any).L;
