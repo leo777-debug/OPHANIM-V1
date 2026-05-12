@@ -120,20 +120,15 @@ useEffect(() => {
   if (!map) return;
   const L = (window as any).L;
   if (!L?.heatLayer) return;
-
   if (heatLayerRef.current) {
     try { map.removeLayer(heatLayerRef.current); } catch(e) {}
     heatLayerRef.current = null;
   }
-
   if (!showHeatmap || events.length === 0) return;
-
   const points = events
     .filter(e => e.lat && e.lng)
-    .map(e => [e.lat, e.lng, e.intensity || 0.5]);
-
+    .map(e => [e.lat, e.lng, e.intensity || 0.5] as [number, number, number]);
   if (points.length === 0) return;
-
   heatLayerRef.current = L.heatLayer(points, {
     radius: 40,
     blur: 30,
@@ -147,7 +142,6 @@ useEffect(() => {
     }
   }).addTo(map);
 }, [showHeatmap, events]);
-  if (!showHeatmap) return;
   const points = events
     .filter(e => e.intensity > 0.3)
     .map(e => [e.lat, e.lng, e.intensity]);
