@@ -112,6 +112,9 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
   const [showGibsPanel, setShowGibsPanel] = useState(false);
   const [showNoFlyPanel, setShowNoFlyPanel] = useState(false);
   const [showJammingPanel, setShowJammingPanel] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+const mapRef = useRef<any>(null);
+const heatLayerRef = useRef<any>(null);
   const [showInstructions, setShowInstructions] = useState(true);
   const [gibsLayer, setGibsLayer] = useState(0);
   const [gibsDate, setGibsDate] = useState(new Date(Date.now() - 86400000).toISOString().split('T')[0]);
