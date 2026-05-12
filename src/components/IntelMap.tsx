@@ -115,6 +115,23 @@ export default function IntelMap({ events, selectedEvent, onEventClick }: IntelM
   const [showHeatmap, setShowHeatmap] = useState(false);
 const mapRef = useRef<any>(null);
 const heatLayerRef = useRef<any>(null);
+  useEffect(() => {
+  if (!mapRef.current || !(window as any).L?.heatLayer) return;
+  if (heatLayerRef.current) {
+    mapRef.current.removeLayer(heatLayerRef.current);
+    heatLayerRef.current = null;
+  }
+  if (!showHeatmap) return;
+  const points = events
+    .filter(e => e.intensity > 0.3)
+    .map(e => [e.lat, e.lng, e.intensity]);
+  heatLayerRef.current = (window as any).L.heatLayer(points, {
+    radius: 35,
+    blur: 25,
+    maxZoom: 10,
+    gradient: { 0.2: '#00ff41', 0.5: '#ffaa00', 0.8: '#ff4444', 1.0: '#ff0000' }
+  }).addTo(mapRef.current);
+}, [showHeatmap, events]);
   const [showInstructions, setShowInstructions] = useState(true);
   const [gibsLayer, setGibsLayer] = useState(0);
   const [gibsDate, setGibsDate] = useState(new Date(Date.now() - 86400000).toISOString().split('T')[0]);
