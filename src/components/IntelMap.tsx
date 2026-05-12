@@ -260,7 +260,9 @@ const heatLayerRef = useRef<any>(null);
         </div>
       )}
 
-      <MapContainer center={[24.0, 50.0]} zoom={5} className="w-full h-full" zoomControl={false}>
+      <MapContainer center={[24.0, 50.0]} zoom={5} className="w-full h-full" zoomControl={false}
+  ref={mapRef}
+  whenCreated={(map: any) => { mapRef.current = map; }}>
         <TileLayer
           attribution='&copy; OpenStreetMap contributors &copy; CARTO'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
