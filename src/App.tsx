@@ -120,6 +120,27 @@ export default function App() {
     });
   };
 
+  const saveEventsToHistory = async (eventsToSave: IntelligenceEvent[]) => {
+  if (eventsToSave.length === 0) return;
+  const rows = eventsToSave
+    .filter(e => e.lat && e.lng)
+    .slice(0, 100) // max 100 per save to avoid quota
+    .map(e => ({
+      asset_id: e.id,
+      asset_type: e.type,
+      lat: e.lat,
+      lng: e.lng,
+      label: e.label,
+      intensity: e.intensity,
+      details: e.details,
+      recorded_at: new Date().toISOString(),
+    }));
+  try {
+    await supabase.from('event_history').insert(rows);
+  } catch(err) {
+    console.warn('History save failed:', err);
+  }
+};
   const mergeLiveData = () => {
     setEvents(prev => {
       const staticEvents = prev.filter(e => !e.id.startsWith('adsb-') && !e.id.startsWith('ais-'));
