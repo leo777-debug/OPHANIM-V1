@@ -1,5 +1,3 @@
-res.setHeader('Access-Control-Allow-Origin', '*');
-res.setHeader('Cache-Control', 'no-store');
 export default async function handler(req, res) {
   try {
     const today = new Date().toISOString().split('T')[0];
