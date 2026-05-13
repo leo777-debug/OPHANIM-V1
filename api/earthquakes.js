@@ -1,3 +1,5 @@
+res.setHeader('Access-Control-Allow-Origin', '*');
+res.setHeader('Cache-Control', 'no-store');
 export default async function handler(req, res) {
   try {
     const resp = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson');
