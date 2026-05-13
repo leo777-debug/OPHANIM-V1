@@ -17,8 +17,8 @@ export default function TimeMachine({ onHistoricalData, isLive, setIsLive }: Tim
 
   const fetchHistorical = useCallback(async (timestamp: number) => {
     setLoading(true);
-    const from = new Date(timestamp - 2 * 60 * 1000).toISOString();
-    const to   = new Date(timestamp + 2 * 60 * 1000).toISOString();
+    const from = new Date(timestamp - 10 * 60 * 1000).toISOString();
+const to   = new Date(timestamp + 10 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from('event_history')
       .select('*')
