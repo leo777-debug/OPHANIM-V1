@@ -1,7 +1,7 @@
 import Auth from "./components/Auth";
 import TimeMachine from "./components/TimeMachine";
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity, AlertTriangle, Layers, Shield, Cpu, Terminal,
   Crosshair, Globe, Newspaper, Database, BrainCircuit,
@@ -33,25 +33,25 @@ type Region = {
 };
 
 const REGIONS: Region[] = [
-  { id: "global",   label: "Global",   center: [20, 0],    zoom: 2,  bbox: [-180,-90,180,90] },
-  { id: "mena",     label: "MENA",     center: [26, 45],   zoom: 5,  bbox: [25,10,65,45] },
-  { id: "europe",   label: "Europe",   center: [50, 15],   zoom: 4,  bbox: [-10,35,40,70] },
-  { id: "americas", label: "Americas", center: [15,-80],   zoom: 3,  bbox: [-130,-55,-35,55] },
-  { id: "asia",     label: "Asia",     center: [30, 100],  zoom: 3,  bbox: [60,-10,150,55] },
-  { id: "africa",   label: "Africa",   center: [0, 20],    zoom: 3,  bbox: [-20,-35,55,38] },
-  { id: "oceania",  label: "Oceania",  center: [-25, 135], zoom: 3,  bbox: [110,-50,180,0] },
-  { id: "arctic",   label: "Arctic",   center: [80, 0],    zoom: 3,  bbox: [-180,60,180,90] },
+  { id: "global", label: "Global", center: [20, 0], zoom: 2, bbox: [-180,-90,180,90] },
+  { id: "mena", label: "MENA", center: [26, 45], zoom: 5, bbox: [25,10,65,45] },
+  { id: "europe", label: "Europe", center: [50, 15], zoom: 4, bbox: [-10,35,40,70] },
+  { id: "americas", label: "Americas", center: [15,-80], zoom: 3, bbox: [-130,-55,-35,55] },
+  { id: "asia", label: "Asia", center: [30, 100], zoom: 3, bbox: [60,-10,150,55] },
+  { id: "africa", label: "Africa", center: [0, 20], zoom: 3, bbox: [-20,-35,55,38] },
+  { id: "oceania", label: "Oceania", center: [-25, 135], zoom: 3, bbox: [110,-50,180,0] },
+  { id: "arctic", label: "Arctic", center: [80, 0], zoom: 3, bbox: [-180,60,180,90] },
 ];
 
 const LAYER_CONFIG = [
-  { key: "aircraft",  icon: Plane,  label: "Aviation",  color: "#60A5FA" },
-  { key: "vessel",    icon: Ship,   label: "Maritime",  color: "#34D399" },
-  { key: "satellite", icon: Orbit,  label: "Satellites",color: "#A78BFA" },
-  { key: "conflict",  icon: Zap,    label: "Conflict",  color: "#F87171" },
-  { key: "seismic",   icon: Radio,  label: "Seismic",   color: "#FBBF24" },
-  { key: "fire",      icon: Flame,  label: "Fires",     color: "#FB923C" },
-  { key: "jamming",   icon: Wifi,   label: "EW / Jam",  color: "#E879F9" },
-  { key: "news",      icon: Globe,  label: "EONET",     color: "#2DD4BF" },
+  { key: "aircraft", icon: Plane, label: "Aviation", color: "#60A5FA" },
+  { key: "vessel", icon: Ship, label: "Maritime", color: "#34D399" },
+  { key: "satellite", icon: Orbit, label: "Satellites",color: "#A78BFA" },
+  { key: "conflict", icon: Zap, label: "Conflict", color: "#F87171" },
+  { key: "seismic", icon: Radio, label: "Seismic", color: "#FBBF24" },
+  { key: "fire", icon: Flame, label: "Fires", color: "#FB923C" },
+  { key: "jamming", icon: Wifi, label: "EW / Jam", color: "#E879F9" },
+  { key: "news", icon: Globe, label: "EONET", color: "#2DD4BF" },
 ];
 
 export default function App() {
@@ -188,6 +188,7 @@ export default function App() {
         fetch(`${API_BASE}/api/jamming`).catch(() => null),
         fetch(`${API_BASE}/api/blackouts`).catch(() => null),
       ]);
+
       const [newsData, cogData, nasaData, quakeData, conflictData, firmsData, satData, jammingData, blackoutData] = await Promise.all([
         newsRes?.ok ? newsRes.json() : null,
         cogRes?.ok ? cogRes.json() : null,
@@ -409,7 +410,6 @@ export default function App() {
   return (
     <div style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}
       className="flex flex-col h-screen w-screen bg-[#0B0E14] text-[#E2E8F0] overflow-hidden">
-
       {/* ── TOP NAV BAR ── */}
       <header className="flex items-center justify-between px-4 h-11 bg-[#0D1117] border-b border-[#1E2736] shrink-0 z-50">
         <div className="flex items-center gap-3">
@@ -442,7 +442,6 @@ export default function App() {
             )}
           </div>
         </div>
-
         <div className="flex items-center gap-1">
           {/* Live indicator */}
           <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-[#22C55E]/10">
@@ -453,7 +452,6 @@ export default function App() {
           </div>
           <div className="w-px h-4 bg-[#1E2736] mx-1" />
           <span className="text-[10px] text-[#475569] mr-2">{filteredEvents.length} events</span>
-
           <button onClick={() => setShowAlerts(!showAlerts)} className="relative p-1.5 rounded hover:bg-[#1E2736] transition-colors">
             <Bell className="w-4 h-4 text-[#64748B]" />
             {alerts.length > 0 && <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full" />}
@@ -467,19 +465,16 @@ export default function App() {
           </button>
         </div>
       </header>
-
       <div className="flex flex-1 min-h-0">
-
         {/* ── LEFT SIDEBAR ── */}
         <aside className="w-64 bg-[#0D1117] border-r border-[#1E2736] flex flex-col shrink-0 z-10">
-
           {/* Tab bar */}
           <div className="flex border-b border-[#1E2736]">
             {[
               { id: "layers", icon: Layers, label: "Layers" },
               { id: "events", icon: Crosshair, label: "Events" },
-              { id: "news",   icon: Newspaper, label: "News" },
-              { id: "intel",  icon: BrainCircuit, label: "Intel" },
+              { id: "news", icon: Newspaper, label: "News" },
+              { id: "intel", icon: BrainCircuit, label: "Intel" },
             ].map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
                 className={cn("flex-1 flex flex-col items-center gap-0.5 py-2 text-[9px] font-medium transition-colors border-b-2",
@@ -489,9 +484,7 @@ export default function App() {
               </button>
             ))}
           </div>
-
           <div className="flex-1 overflow-y-auto">
-
             {/* LAYERS TAB */}
             {activeTab === "layers" && (
               <div className="p-3 space-y-1">
@@ -511,22 +504,18 @@ export default function App() {
                     </div>
                   </button>
                 ))}
-
                 <div className="border-t border-[#1E2736] my-3" />
                 <div className="text-[10px] font-semibold text-[#475569] uppercase tracking-wider px-1 py-1">Actions</div>
-
                 <button onClick={() => { fetchIntel(); fetchAircraft(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-[#94A3B8] hover:bg-[#1E2736] hover:text-white transition-all">
                   <RefreshCw className="w-3.5 h-3.5" /> Refresh all streams
                 </button>
-
                 <label className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-[#94A3B8] hover:bg-[#1E2736] hover:text-white transition-all cursor-pointer">
                   <Database className={cn("w-3.5 h-3.5", isImporting && "animate-bounce")} />
                   {isImporting ? "Importing..." : "Import CSV data"}
                   <input type="file" accept=".csv" className="hidden"
                     onChange={e => e.target.files?.[0] && handleCSVImport(e.target.files[0])} />
                 </label>
-
                 <button onClick={() => handleAnalyze(true)} disabled={isAnalyzing}
                   className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-xs font-medium bg-[#3B82F6]/10 text-[#3B82F6] hover:bg-[#3B82F6]/20 transition-all disabled:opacity-50">
                   <Cpu className={cn("w-3.5 h-3.5", isAnalyzing && "animate-spin")} />
@@ -534,7 +523,6 @@ export default function App() {
                 </button>
               </div>
             )}
-
             {/* EVENTS TAB */}
             {activeTab === "events" && (
               <div className="p-2 space-y-1">
@@ -563,7 +551,6 @@ export default function App() {
                 })}
               </div>
             )}
-
             {/* NEWS TAB */}
             {activeTab === "news" && (
               <div className="p-2 space-y-1">
@@ -580,7 +567,6 @@ export default function App() {
                 }
               </div>
             )}
-
             {/* INTEL TAB */}
             {activeTab === "intel" && (
               <div className="p-2 space-y-1">
@@ -595,7 +581,6 @@ export default function App() {
               </div>
             )}
           </div>
-
           {/* System log */}
           <div className="border-t border-[#1E2736] p-2">
             <div className="flex items-center gap-1.5 mb-1.5">
@@ -609,7 +594,6 @@ export default function App() {
             </div>
           </div>
         </aside>
-
         {/* ── MAP AREA ── */}
         <main className="flex-1 relative min-w-0">
           {/* Loading past data banner */}
@@ -619,21 +603,18 @@ export default function App() {
               <span className="text-xs text-[#F59E0B] font-medium">Loading historical data...</span>
             </div>
           )}
-
           <IntelMap
             events={historicalEvents ?? filteredEvents}
             selectedEvent={selectedEvent}
             onEventClick={setSelectedEvent}
             region={region}
           />
-
           <TimeMachine
             onHistoricalData={(data) => { setHistoricalEvents(data); setIsLoadingHistory(false); }}
             onLoadingStart={() => setIsLoadingHistory(true)}
             isLive={isLive}
             setIsLive={setIsLive}
           />
-
           {/* Analysing overlay */}
           {isAnalyzing && (
             <div className="absolute inset-0 bg-[#0B0E14]/60 flex items-center justify-center z-40 backdrop-blur-sm">
@@ -651,14 +632,12 @@ export default function App() {
             </div>
           )}
         </main>
-
         {/* ── RIGHT PANEL — event detail + analysis ── */}
         <AnimatePresence>
           {(selectedEvent || analysis) && (
             <motion.aside initial={{ x: 320, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 320, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="w-80 bg-[#0D1117] border-l border-[#1E2736] flex flex-col shrink-0 z-10">
-
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#1E2736]">
                 <span className="text-xs font-semibold text-white">
                   {selectedEvent ? "Entity Detail" : "AI Assessment"}
@@ -668,7 +647,6 @@ export default function App() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {selectedEvent && (
                   <div className="space-y-3">
@@ -680,10 +658,10 @@ export default function App() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { label: "Latitude",  value: selectedEvent.lat.toFixed(4) },
+                        { label: "Latitude", value: selectedEvent.lat.toFixed(4) },
                         { label: "Longitude", value: selectedEvent.lng.toFixed(4) },
                         { label: "Intensity", value: `${(selectedEvent.intensity * 100).toFixed(0)}%` },
-                        { label: "Time",      value: new Date(selectedEvent.timestamp).toLocaleTimeString() },
+                        { label: "Time", value: new Date(selectedEvent.timestamp).toLocaleTimeString() },
                       ].map(({ label, value }) => (
                         <div key={label} className="bg-[#0B0E14] rounded-lg p-2.5 border border-[#1E2736]">
                           <div className="text-[9px] text-[#475569] mb-0.5">{label}</div>
@@ -702,7 +680,6 @@ export default function App() {
                     )}
                   </div>
                 )}
-
                 {analysis && (
                   <div className="space-y-3">
                     <div className="bg-[#0B0E14] rounded-xl p-4 border border-[#1E2736]">
@@ -722,14 +699,12 @@ export default function App() {
                         {(analysis as any).threat_level || "UNKNOWN"}
                       </div>
                     </div>
-
                     {(analysis as any).gibs_analyzed && (
                       <div className="flex items-center gap-2 px-3 py-2 bg-[#22C55E]/5 rounded-lg border border-[#22C55E]/20">
                         <div className="w-1.5 h-1.5 bg-[#22C55E] rounded-full" />
                         <span className="text-[10px] text-[#22C55E]">GIBS satellite imagery analysed</span>
                       </div>
                     )}
-
                     {Array.isArray(analysis.evidence) && analysis.evidence.length > 0 && (
                       <div className="space-y-1.5">
                         <div className="text-[10px] font-semibold text-[#475569] uppercase tracking-wider">Evidence</div>
@@ -741,12 +716,10 @@ export default function App() {
                         ))}
                       </div>
                     )}
-
                     <div className="bg-[#3B82F6]/5 border border-[#3B82F6]/20 rounded-lg p-3">
                       <div className="text-[10px] font-semibold text-[#3B82F6] mb-1.5">Recommendation</div>
                       <div className="text-[11px] text-[#CBD5E1] leading-relaxed">{analysis.recommendation}</div>
                     </div>
-
                     <div className="text-[10px] text-[#475569] leading-relaxed">{analysis.summary}</div>
                   </div>
                 )}
@@ -755,7 +728,6 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
-
       {/* ── ALERT TOASTS ── */}
       <div className="fixed top-14 right-4 z-50 flex flex-col gap-2 w-72 pointer-events-none">
         <AnimatePresence>
