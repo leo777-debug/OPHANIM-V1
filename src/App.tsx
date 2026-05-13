@@ -335,6 +335,7 @@ export default function App() {
         return [...scrapedEvents, ...liveAircraft, ...liveShips];
       });
       addLog(`FUSION COMPLETE. ${scrapedEvents.length} STATIC NODES SYNCED.`);
+      saveEventsToHistory(scrapedEvents);
     } catch (err) {
       addLog("INTEL FUSION FAILED: CHECK API CONFIG.");
       console.error(err);
