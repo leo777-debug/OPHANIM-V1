@@ -2,17 +2,17 @@ import Auth from "./components/Auth";
 import TimeMachine from "./components/TimeMachine";
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import {
+import { 
   Activity, AlertTriangle, Layers, Shield, Cpu, Terminal,
   Crosshair, Globe, Newspaper, Database, BrainCircuit,
-  RefreshCw, Plane, Ship, Orbit, Zap, Flame, Radio, Wifi,
-  ChevronDown, X, Bell, LogOut, Clock, Eye, EyeOff, ChevronRight
+  RefreshCw, Search, Plane, Ship, Orbit, Zap, Flame, Radio, Wifi
 } from "lucide-react";
 import IntelMap from "./components/IntelMap";
 import { IntelligenceEvent, AnalysisResult, CognitionLesson, NewsItem } from "./types";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import Papa from "papaparse";
+import Auth from "./components/Auth";
 import { supabase } from "./lib/supabase";
 
 function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
@@ -25,70 +25,57 @@ export type MapLayers = {
   jamming: boolean;
 };
 
-type Region = {
-  id: string; label: string;
-  center: [number, number]; zoom: number;
-  bbox: number[];
-};
-
-const REGIONS: Region[] = [
-  { id: "global", label: "Global", center: [20, 0], zoom: 2, bbox: [-180,-90,180,90] },
-  { id: "mena", label: "MENA", center: [26, 45], zoom: 5, bbox: [25,10,65,45] },
-  { id: "europe", label: "Europe", center: [50, 15], zoom: 4, bbox: [-10,35,40,70] },
-  { id: "americas", label: "Americas", center: [15,-80], zoom: 3, bbox: [-130,-55,-35,55] },
-  { id: "asia", label: "Asia", center: [30, 100], zoom: 3, bbox: [60,-10,150,55] },
-  { id: "africa", label: "Africa", center: [0, 20], zoom: 3, bbox: [-20,-35,55,38] },
-  { id: "oceania", label: "Oceania", center: [-25, 135], zoom: 3, bbox: [110,-50,180,0] },
-  { id: "arctic", label: "Arctic", center: [80, 0], zoom: 3, bbox: [-180,60,180,90] },
-];
-
-const LAYER_CONFIG = [
-  { key: "aircraft", icon: Plane, label: "Aviation", color: "#60A5FA" },
-  { key: "vessel", icon: Ship, label: "Maritime", color: "#34D399" },
-  { key: "satellite", icon: Orbit, label: "Satellites",color: "#A78BFA" },
-  { key: "conflict", icon: Zap, label: "Conflict", color: "#F87171" },
-  { key: "seismic", icon: Radio, label: "Seismic", color: "#FBBF24" },
-  { key: "fire", icon: Flame, label: "Fires", color: "#FB923C" },
-  { key: "jamming", icon: Wifi, label: "EW / Jam", color: "#E879F9" },
-  { key: "news", icon: Globe, label: "EONET", color: "#2DD4BF" },
-];
-
 export default function App() {
   const [session, setSession] = useState<any>(null);
   const [demoAccess, setDemoAccess] = useState(() => localStorage.getItem("ophanim_demo_access") === "true");
-  const [activeTab, setActiveTab] = useState<"layers" | "events" | "news" | "intel">("layers");
-  const [region, setRegion] = useState<Region>(REGIONS[0]);
-  const [showRegionMenu, setShowRegionMenu] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(true);
+  const [activeTab, setActiveTab] = useState<"streams" | "news" | "cognition">("streams");
   const [layers, setLayers] = useState<MapLayers>({
     aircraft: true, vessel: true, satellite: true, news: true,
-    seismic: true, conflict: true, fire: true, jamming: true,
+    seismic: true, conflict: true, fire: true, jamming: true
   });
   const [events, setEvents] = useState<IntelligenceEvent[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [cognition, setCognition] = useState<CognitionLesson[]>([
-    { id: "seed-1", title: "Strait of Hormuz Chokepoint", lesson: "Vessel clustering near Qeshm Island with AIS dark periods >2h = high-priority target. IRGCN doctrine relies on swarm tactics from these staging points.", context: "ATLAS — Persian Gulf Operations" },
-    { id: "seed-2", title: "GPS Spoofing Signature — MENA", lesson: "Spoofing in eastern Med/Persian Gulf typically precedes kinetic action by 24-72h. Vessels reporting impossible positions indicate active EW operations.", context: "ATLAS Electronic Warfare" },
-    { id: "seed-3", title: "Houthi Missile Seismic Signature", lesson: "Ballistic launches from Yemen generate shallow seismic events (<2km depth, M1.5-2.5). Cross-reference ADS-B gaps and news for confirmation.", context: "ATLAS Yemen Operations" },
-    { id: "seed-4", title: "Red Sea Threat Assessment", lesson: "Vessels transiting Bab el-Mandeb: avoid night transit at ORANGE+. Houthi attacks peak 2200-0200 local time historically.", context: "ATLAS Maritime Security" },
-    { id: "seed-5", title: "IAF Operations Signature", lesson: "IAF strikes preceded by increased UAV activity over Lebanon/Syria + GPS jamming expanding from northern Israel.", context: "ATLAS OSINT — Levant" },
+    { id: "seed-1", title: "Strait of Hormuz Chokepoint Doctrine", lesson: "Any vessel clustering near Qeshm Island or Abu Musa with AIS dark periods exceeding 2 hours should be treated as high-priority surveillance target. Iranian IRGCN doctrine relies on swarm tactics from these staging points.", context: "ATLAS Historical Intelligence — Persian Gulf Operations" },
+    { id: "seed-2", title: "GPS Spoofing Signature — MENA", lesson: "GPS spoofing events in the eastern Mediterranean and Persian Gulf typically precede kinetic action by 24-72 hours. Vessels reporting impossible positions (inland or stationary while underway) indicate active EW operations.", context: "ATLAS Electronic Warfare Analysis" },
+    { id: "seed-3", title: "Houthi Missile Launch Seismic Signature", lesson: "Ballistic missile launches from Yemen generate shallow seismic events (depth < 2km) with magnitude 1.5-2.5. Cross-reference with ADS-B gaps and news events for confirmation.", context: "ATLAS Yemen Operations Database" },
+    { id: "seed-4", title: "Red Sea Shipping Lane Threat Assessment", lesson: "Vessels transiting Bab el-Mandeb should maintain AIS broadcast and avoid night transit when threat level is ORANGE or above. Historical pattern shows Houthi attacks peak 2200-0200 local time.", context: "ATLAS Maritime Security — Red Sea" },
+    { id: "seed-5", title: "Israeli Air Operations Signature", lesson: "IAF strikes are typically preceded by increased UAV activity over Lebanon/Syria and GPS jamming expanding from northern Israel. ADS-B squawk 7600 clusters indicate communications disruption operations.", context: "ATLAS OSINT — Levant Operations" },
   ]);
   const [selectedEvent, setSelectedEvent] = useState<IntelligenceEvent | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [autoAnalysisActive, setAutoAnalysisActive] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
-  const [alerts, setAlerts] = useState<{ id: string; msg: string; score: number }[]>([]);
-  const [logs, setLogs] = useState<string[]>(["OPHANIM SYSTEM INITIALISED"]);
+  const [alerts, setAlerts] = useState<{id: string, msg: string, score: number}[]>([]);
+  const [logs, setLogs] = useState<string[]>(["OPHANIM-V1 SYSTEM INITIALIZED"]);
   const [analysisStatus, setAnalysisStatus] = useState<string>("");
-  const [isLive, setIsLive] = useState(true);
-  const [historicalEvents, setHistoricalEvents] = useState<IntelligenceEvent[] | null>(null);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [showAlerts, setShowAlerts] = useState(false);
-
   const liveAircraftRef = useRef<Map<string, IntelligenceEvent>>(new Map());
   const liveShipsRef = useRef<Map<string, IntelligenceEvent>>(new Map());
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [isLive, setIsLive] = useState(true);
+const [historicalEvents, setHistoricalEvents] = useState<IntelligenceEvent[] | null>(null);
+  const isResizing = useRef(false);
 
-  const addLog = (msg: string) => setLogs(prev => [msg, ...prev].slice(0, 100));
+  const startResize = (e: React.MouseEvent) => {
+    isResizing.current = true;
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+    const onMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return;
+      setSidebarWidth(Math.min(600, Math.max(200, startWidth + ev.clientX - startX)));
+    };
+    const onUp = () => {
+      isResizing.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  const addLog = (msg: string) => setLogs(prev => [msg, ...prev].slice(0, 50));
 
   const playAlarm = () => {
     try {
@@ -96,90 +83,112 @@ export default function App() {
       const playBeep = (freq: number, start: number, duration: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.frequency.value = freq; osc.type = "square";
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'square';
         gain.gain.setValueAtTime(0.3, ctx.currentTime + start);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
-        osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + duration);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + duration);
       };
-      playBeep(880, 0, 0.1); playBeep(660, 0.15, 0.1);
-      playBeep(880, 0.3, 0.1); playBeep(440, 0.45, 0.3);
+      playBeep(880, 0, 0.1);
+      playBeep(660, 0.15, 0.1);
+      playBeep(880, 0.3, 0.1);
+      playBeep(440, 0.45, 0.3);
     } catch (e) {}
   };
 
   const handleCSVImport = (file: File) => {
     setIsImporting(true);
+    addLog(`INITIATING_CSV_PARSING: ${file.name}`);
     Papa.parse(file, {
       header: true, skipEmptyLines: true,
       complete: (results) => {
-        const imported: IntelligenceEvent[] = (results.data as any[]).map((row, i) => ({
+        const importedEvents: IntelligenceEvent[] = results.data.map((row: any, i: number) => ({
           id: row.id || `csv-${Date.now()}-${i}`,
-          type: (["vessel","aircraft","conflict","news","satellite"].includes(row.type) ? row.type : "news") as any,
+          type: (['vessel','aircraft','conflict','news','satellite'].includes(row.type) ? row.type : 'news') as any,
           lat: parseFloat(row.lat), lng: parseFloat(row.lng),
-          label: row.label || "UNKNOWN", intensity: parseFloat(row.intensity) || 0.5,
-          details: row.details || "Imported.", timestamp: row.timestamp || new Date().toISOString(),
+          label: row.label || "IDENT_UNKNOWN",
+          intensity: parseFloat(row.intensity) || 0.5,
+          details: row.details || "External data import.",
+          timestamp: row.timestamp || new Date().toISOString(),
         })).filter(e => !isNaN(e.lat) && !isNaN(e.lng));
-        if (imported.length > 0) { 
-          setEvents(prev => [...prev, ...imported]); 
-          addLog(`CSV: ${imported.length} events imported.`); 
-        }
+        if (importedEvents.length > 0) {
+          setEvents(prev => [...prev, ...importedEvents]);
+          addLog(`DATA_IMPORT_SUCCESS: ${importedEvents.length} NODES MERGED.`);
+        } else { addLog("IMPORT_ERROR: No valid coordinates found in CSV."); }
         setIsImporting(false);
       },
-      error: (err) => { addLog(`CSV error: ${err.message}`); setIsImporting(false); }
+      error: (error) => { addLog(`IMPORT_FATAL: ${error.message}`); setIsImporting(false); }
     });
   };
 
   const saveEventsToHistory = async (eventsToSave: IntelligenceEvent[]) => {
-    if (eventsToSave.length === 0) return;
-    const rows = eventsToSave.filter(e => e.lat && e.lng).slice(0, 100).map(e => ({
-      asset_id: e.id, asset_type: e.type, lat: e.lat, lng: e.lng,
-      label: e.label, intensity: e.intensity, details: e.details,
+  console.log('SAVING TO HISTORY:', eventsToSave.length, 'events');
+  if (eventsToSave.length === 0) return;
+  const rows = eventsToSave
+    .filter(e => e.lat && e.lng)
+    .slice(0, 100) // max 100 per save to avoid quota
+    .map(e => ({
+      asset_id: e.id,
+      asset_type: e.type,
+      lat: e.lat,
+      lng: e.lng,
+      label: e.label,
+      intensity: e.intensity,
+      details: e.details,
       recorded_at: new Date().toISOString(),
     }));
-    try {
-      const { error } = await supabase.from("event_history").insert(rows);
-      if (error) console.error("Supabase insert error:", error);
-    } catch (err) { console.warn("History save failed:", err); }
-  };
+  try {
+    const { error } = await supabase.from('event_history').insert(rows);
+if (error) console.error('SUPABASE INSERT ERROR:', error);
+else console.log('SAVED TO SUPABASE OK');
+  } catch(err) {
+    console.warn('History save failed:', err);
+  }
+};
 
   const mergeLiveData = () => {
     setEvents(prev => {
-      const staticEvents = prev.filter(e => !e.id.startsWith("adsb-") && !e.id.startsWith("ais-"));
-      return [...staticEvents, ...Array.from(liveAircraftRef.current.values()), ...Array.from(liveShipsRef.current.values())];
+      const staticEvents = prev.filter(e => !e.id.startsWith('adsb-') && !e.id.startsWith('ais-'));
+      const aircraft = Array.from(liveAircraftRef.current.values());
+      const ships = Array.from(liveShipsRef.current.values());
+      return [...staticEvents, ...aircraft, ...ships];
     });
   };
 
-  // ... (rest of your functions remain exactly the same)
   const fetchAircraft = async () => {
     try {
       const resp = await fetch(`${API_BASE}/api/aircraft`);
       if (!resp.ok) return;
       const data = await resp.json();
-      if (data.ac?.length > 0) {
-        let mil = 0;
+      if (data.ac && data.ac.length > 0) {
+        let milCount = 0;
         data.ac.filter((a: any) => a.lat && a.lon).forEach((a: any) => {
-          const isMil = a.t?.includes("MIL") ||
-            ["RCH","DUKE","FORTE","LAGR","HOMER","USAF","UAF","JAKE","ROCKY","KING","REACH","TOPGN"].some(p => a.flight?.startsWith(p)) ||
-            ["7700","7600","7500"].includes(a.squawk);
-          if (isMil) mil++;
-          const ev: IntelligenceEvent = {
-            id: "adsb-" + a.hex, type: "aircraft", lat: a.lat, lng: a.lon,
-            label: isMil ? `MIL: ${a.flight?.trim() || a.hex}` : (a.flight?.trim() || a.hex || "UNID"),
-            intensity: isMil ? 0.9 : 0.3,
-            details: `${isMil ? "MILITARY" : "Civil"}: ${a.flight?.trim() || "Unknown"} | Alt: ${a.alt_baro || "?"}ft | Speed: ${a.gs || "?"}kts | Squawk: ${a.squawk || "None"}`,
+          const isMilitary = a.t?.includes('MIL') ||
+            ['RCH','DUKE','FORTE','LAGR','HOMER','USAF','UAF','JAKE','ROCKY','KING','REACH','TOPGN'].some(p => a.flight?.startsWith(p)) ||
+            a.squawk === '7700' || a.squawk === '7600' || a.squawk === '7500';
+          if (isMilitary) milCount++;
+          const event: IntelligenceEvent = {
+            id: "adsb-" + a.hex, type: "aircraft",
+            lat: a.lat, lng: a.lon,
+            label: isMilitary ? `⚡ MIL: ${a.flight?.trim() || a.hex}` : (a.flight?.trim() || a.hex || "UNID"),
+            intensity: isMilitary ? 0.9 : 0.3,
+            details: `${isMilitary ? '⚠️ MILITARY AIRCRAFT' : 'Civil'}: ${a.flight?.trim() || 'Unknown'}. Alt: ${a.alt_baro || '?'}ft. Speed: ${a.gs || '?'}kts. Squawk: ${a.squawk || 'None'}. Type: ${a.t || '?'}.`,
             timestamp: new Date().toISOString(),
-            path: (liveAircraftRef.current.get("adsb-" + a.hex)?.path || []).slice(-20).concat([[a.lat, a.lon]]) as [number, number][],
+            path: (liveAircraftRef.current.get("adsb-" + a.hex)?.path || []).slice(-20).concat([[a.lat, a.lon]]) as [number,number][]
           };
-          liveAircraftRef.current.set(ev.id, ev);
+          liveAircraftRef.current.set(event.id, event);
         });
         mergeLiveData();
-        addLog(`ADS-B: ${data.ac.filter((a: any) => a.lat).length} aircraft tracked (${mil} military)`);
+        addLog(`ADSB: ${data.ac.filter((a:any) => a.lat).length} AIRCRAFT (${milCount} MIL) LIVE.`);
       }
-    } catch (e) { addLog("ADS-B: Fetch failed"); }
+    } catch (e) { addLog("ADSB: FETCH FAILED."); }
   };
 
   const fetchIntel = async () => {
-    addLog("Polling all intelligence streams...");
+    addLog("POLLING ALL DATA STREAMS...");
     try {
       const [newsRes, cogRes, nasaRes, quakeRes, conflictRes, firmsRes, satRes, jammingRes, blackoutRes] = await Promise.all([
         fetch(`${API_BASE}/api/news`).catch(() => null),
@@ -206,43 +215,137 @@ export default function App() {
       ]);
 
       if (newsData?.articles) setNews(newsData.articles);
-      if (cogData?.length > 0) setCognition(cogData);
+      if (cogData && cogData.length > 0) setCognition(cogData);
 
-      const scraped: IntelligenceEvent[] = [];
+      const scrapedEvents: IntelligenceEvent[] = [];
 
-      // ... (All the scraping logic remains unchanged)
-      nasaData?.events?.forEach((e: any) => {
-        if (e.geometry?.[0]) scraped.push({
-          id: "nasa-" + e.id, type: "news",
-          lat: e.geometry[0].coordinates[1], lng: e.geometry[0].coordinates[0],
-          label: "EONET: " + e.title, intensity: 0.5,
-          details: `NASA EONET: ${e.title} | Category: ${e.categories?.[0]?.title || "Unknown"}`,
-          timestamp: e.geometry[0].date,
+      if (nasaData?.events) {
+        nasaData.events.forEach((e: any) => {
+          if (e.geometry?.[0]) {
+            scrapedEvents.push({
+              id: "nasa-" + e.id, type: "news",
+              lat: e.geometry[0].coordinates[1], lng: e.geometry[0].coordinates[0],
+              label: "🌍 NASA EONET: " + e.title, intensity: 0.5,
+              details: `NASA Earth Observatory Natural Event: ${e.title}. Category: ${e.categories?.[0]?.title || 'Unknown'}. Status: Active.`,
+              timestamp: e.geometry[0].date
+            });
+          }
         });
-      });
+        addLog(`EONET: ${nasaData.events.length} ENVIRONMENTAL EVENTS.`);
+      }
 
-      // (I'm keeping the rest of fetchIntel exactly as you had it to avoid breaking changes)
-      // ... continuing with quakeData, conflictData, firmsData, etc.
-      quakeData?.features?.forEach((f: any) => {
-        const [lng, lat] = f.geometry.coordinates;
-        const mag = f.properties.mag, place = f.properties.place, type = f.properties.type;
-        const isExp = type === "explosion" || type === "quarry blast";
-        const isMissile = mag > 3.0 && type === "earthquake" && f.geometry.coordinates[2] < 5;
-        scraped.push({
-          id: "quake-" + f.id, type: "conflict", lat, lng,
-          label: isExp ? `EXPLOSION M${mag} — ${place}` : isMissile ? `SHALLOW SEISMIC M${mag} — ${place}` : `SEISMIC M${mag} — ${place}`,
-          intensity: Math.min(Math.abs(mag || 0.1) / 8, 1.0),
-          details: `${isExp ? "EXPLOSION DETECTED" : isMissile ? "POSSIBLE STRIKE" : "Seismic"}: M${mag} | ${place} | Depth: ${f.geometry.coordinates[2]}km | ${type}`,
-          timestamp: new Date(f.properties.time).toISOString(),
+      if (quakeData?.features) {
+        quakeData.features.forEach((f: any) => {
+          const [lng, lat] = f.geometry.coordinates;
+          const mag = f.properties.mag;
+          const place = f.properties.place;
+          const type = f.properties.type;
+          const isExplosion = type === 'explosion' || type === 'quarry blast' || type === 'nuclear explosion';
+          const isMissile = mag > 3.0 && type === 'earthquake' && f.geometry.coordinates[2] < 5;
+          scrapedEvents.push({
+            id: "quake-" + f.id, type: "conflict", lat, lng,
+            label: isExplosion ? `⚡ EXPLOSION: M${mag} ${place}` : isMissile ? `⚠️ SHALLOW SEISMIC: M${mag} ${place}` : `🔴 SEISMIC: M${mag} ${place}`,
+            intensity: Math.min(Math.abs(mag || 0.1) / 8, 1.0),
+            details: `${isExplosion ? '⚠️ EXPLOSION/DETONATION DETECTED' : isMissile ? '⚠️ POSSIBLE STRIKE/IMPACT - Very shallow depth' : 'Seismic event'}: M${mag}. Place: ${place}. Depth: ${f.geometry.coordinates[2]}km. Type: ${type}. Time: ${new Date(f.properties.time).toUTCString()}`,
+            timestamp: new Date(f.properties.time).toISOString()
+          });
         });
-      });
+        addLog(`SEISMIC: ${quakeData.features.length} EVENTS (ALL MAGNITUDES).`);
+      }
 
-      // ... (remaining scraping code is unchanged from your original)
-      setEvents(prev => [...scraped, ...Array.from(liveAircraftRef.current.values()), ...Array.from(liveShipsRef.current.values())]);
-      addLog(`Fusion complete — ${scraped.length} events synced`);
-      saveEventsToHistory(scraped);
+      if (conflictData?.features) {
+        conflictData.features.slice(0, 20).forEach((f: any, i: number) => {
+          if (f.geometry?.coordinates) {
+            scrapedEvents.push({
+              id: "gdelt-" + i, type: "conflict",
+              lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0],
+              label: "⚔️ GDELT: " + (f.properties?.name || "CONFLICT EVENT"),
+              intensity: 0.7,
+              details: `GDELT conflict/event detected. ${f.properties?.htmlurl ? 'Source: ' + f.properties.htmlurl : 'Real-time event tracking.'}`,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+        addLog(`GDELT: ${Math.min(conflictData.features?.length || 0, 20)} CONFLICT NODES.`);
+      }
+
+      if (firmsData) {
+        const lines = firmsData.split('\n').slice(1, 20);
+        lines.forEach((line: string, i: number) => {
+          const cols = line.split(',');
+          if (cols.length > 3) {
+            const lat = parseFloat(cols[0]), lng = parseFloat(cols[1]);
+            const brightness = parseFloat(cols[2]);
+            if (!isNaN(lat) && !isNaN(lng)) {
+              scrapedEvents.push({
+                id: "firms-" + i, type: "news", lat, lng,
+                label: `🔥 FIRE: Brightness ${brightness}K`,
+                intensity: Math.min(brightness / 400, 1.0),
+                details: `NASA FIRMS active fire. Brightness: ${brightness}K. Satellite: VIIRS.`,
+                timestamp: new Date().toISOString()
+              });
+            }
+          }
+        });
+        addLog(`FIRMS: ACTIVE FIRE NODES SYNCED.`);
+      }
+
+      if (satData?.above && satData.above.length > 0) {
+        satData.above.forEach((s: any) => {
+          const prev = events.find(e => e.id === "n2yo-" + s.satid);
+          scrapedEvents.push({
+            id: "n2yo-" + s.satid, type: "satellite",
+            lat: s.satlat, lng: s.satlng,
+            label: s.satname, intensity: 0.1,
+            details: `LIVE satellite: ${s.satname}. NORAD: ${s.satid}. Alt: ${Math.round(s.satalt)}km. Launched: ${s.launchDate}. Velocity: ~7.6km/s.`,
+            timestamp: new Date().toISOString(),
+            path: prev?.path ? [...prev.path.slice(-10), [s.satlat, s.satlng]] as [number,number][] : [[s.satlat, s.satlng]]
+          });
+        });
+        addLog(`N2YO: ${satData.above.length} REAL SATELLITES OVER MENA.`);
+      }
+
+      if (jammingData?.jams) {
+        jammingData.jams.forEach((j: any, i: number) => {
+          if (j.lat && j.lon) {
+            scrapedEvents.push({
+              id: "jam-" + i, type: "conflict",
+              lat: j.lat, lng: j.lon,
+              label: `📡 GPS JAM: ${j.location || 'Unknown'}`,
+              intensity: 0.8,
+              details: `GPS jamming/spoofing detected! Location: ${j.location || 'Unknown'}. Level: ${j.level || 'High'}.`,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+        addLog(`GPS JAMMING: ${jammingData.jams.length} INTERFERENCE ZONES.`);
+      }
+
+      if (blackoutData?.data) {
+        blackoutData.data.slice(0, 5).forEach((b: any, i: number) => {
+          if (b.location?.latitude && b.location?.longitude) {
+            scrapedEvents.push({
+              id: "blackout-" + i, type: "conflict",
+              lat: b.location.latitude, lng: b.location.longitude,
+              label: `🌐 BLACKOUT: ${b.entity?.name || 'Unknown'}`,
+              intensity: 0.6,
+              details: `Internet outage detected! Entity: ${b.entity?.name}. Country: ${b.location?.country}.`,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+        addLog(`BLACKOUTS: ${blackoutData.data.length} INTERNET OUTAGES.`);
+      }
+
+      setEvents(prev => {
+        const liveAircraft = Array.from(liveAircraftRef.current.values());
+        const liveShips = Array.from(liveShipsRef.current.values());
+        return [...scrapedEvents, ...liveAircraft, ...liveShips];
+      });
+      addLog(`FUSION COMPLETE. ${scrapedEvents.length} STATIC NODES SYNCED.`);
+      saveEventsToHistory(scrapedEvents);
     } catch (err) {
-      addLog("Intelligence fusion failed — check API configuration");
+      addLog("INTEL FUSION FAILED: CHECK API CONFIG.");
       console.error(err);
     }
   };
@@ -253,48 +356,63 @@ export default function App() {
     if (e.type === "satellite") return layers.satellite;
     if (e.type === "news") return layers.news;
     if (e.type === "conflict") {
-      if (e.id.startsWith("quake-")) return layers.seismic;
-      if (e.id.startsWith("jam-") || e.id.startsWith("blackout-")) return layers.jamming;
+      if (e.id.startsWith('quake-')) return layers.seismic;
+      if (e.id.startsWith('jam-') || e.id.startsWith('blackout-')) return layers.jamming;
       return layers.conflict;
     }
     return true;
   });
 
-  // All useEffects and other functions remain the same as your original
   useEffect(() => {
     if (events.length === 0) return;
-    const id = setInterval(() => {
-      setEvents(prev => prev.map(ev => {
-        if (ev.type === "satellite") {
-          const dLat = (Math.random() - 0.5) * 0.05, dLng = (Math.random() - 0.3) * 0.1;
-          return { ...ev, lat: ev.lat + dLat, lng: ev.lng + dLng, path: [...(ev.path || []).slice(-20), [ev.lat, ev.lng]] as [number, number][] };
+    const moveInterval = setInterval(() => {
+      setEvents(prev => prev.map(event => {
+        if (event.type === 'satellite') {
+          const dLat = (Math.random() - 0.5) * 0.05;
+          const dLng = (Math.random() - 0.3) * 0.1;
+          const newPath = [...(event.path || []).slice(-20), [event.lat, event.lng]] as [number,number][];
+          return { ...event, lat: event.lat + dLat, lng: event.lng + dLng, path: newPath };
         }
-        return ev;
+        return event;
       }));
     }, 2000);
-    return () => clearInterval(id);
+    return () => clearInterval(moveInterval);
   }, [events.length]);
 
-  const handleAnalyze = async (isManual = true) => {
+  const handleAnalyze = async (isManual: boolean = true) => {
     setIsAnalyzing(isManual);
     if (isManual) { setAnalysis(null); setSelectedEvent(null); }
-    const steps = ["Initialising analysis engine...", "Fetching GIBS satellite imagery...", "Querying knowledge base...", "Fusing multi-domain streams...", "Generating predictive assessment..."];
-    if (isManual) for (const step of steps) { setAnalysisStatus(step); addLog(step); await new Promise(r => setTimeout(r, 700)); }
+    const steps = [
+      "INITIALIZING ASI-EVOLVE RESEARCHER AGENT...",
+      "FETCHING GIBS SATELLITE IMAGERY...",
+      "QUERYING COGNITION STORE...",
+      "VECTORIZING TACTICAL STREAMS...",
+      "FUSING SEISMIC + CONFLICT + FIRE + IMAGERY...",
+      "CRYSTALLIZING PREDICTIVE OUTCOME..."
+    ];
+    if (isManual) {
+      for (const step of steps) {
+        setAnalysisStatus(step); addLog(step);
+        await new Promise(r => setTimeout(r, 800));
+      }
+    } else { addLog("ASI-EVOLVE: BACKGROUND RECON COMMENCED."); }
     try {
-      const resp = await fetch(`${API_BASE}/api/analyze`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intelligenceData: selectedEvent || events.slice(0, 30) }),
+      const response = await fetch(`${API_BASE}/api/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intelligenceData: selectedEvent || events.slice(0, 30) })
       });
-      if (resp.status === 429) { addLog("Rate limited — please wait"); setIsAnalyzing(false); setAnalysisStatus(""); return; }
-      const result = await resp.json();
+      if (response.status === 429) { addLog("THROTTLED."); setIsAnalyzing(false); setAnalysisStatus(""); return; }
+      const result = await response.json();
       setAnalysis({ ...result, timestamp: new Date().toISOString() });
+      if (result.gibs_analyzed) addLog("GIBS SATELLITE IMAGERY ANALYZED BY DEEPSEEK!");
       if (!isManual && result.threat_score > 40) {
         setAlerts(prev => [{ id: Date.now().toString(), msg: result.summary, score: result.threat_score }, ...prev].slice(0, 5));
-        addLog(`ALERT: Threat score ${result.threat_score}%`);
+        addLog(`[ALERT] THREAT DETECTED [${result.threat_score}%]`);
         playAlarm();
       }
-      addLog(isManual ? "Analysis complete" : "Background scan complete");
-    } catch (err) { addLog("Analysis error"); }
+      addLog(isManual ? "ANALYSIS COMPLETE." : "BACKGROUND SCAN COMPLETE.");
+    } catch (err) { addLog("AI ANALYSIS ERROR."); }
     finally { setIsAnalyzing(false); setAnalysisStatus(""); }
   };
 
@@ -302,9 +420,8 @@ export default function App() {
     localStorage.removeItem("ophanim_demo_access");
     setDemoAccess(false);
     await supabase.auth.signOut();
+    addLog("SESSION_TERMINATED.");
   };
-
-  // ... (All remaining useEffects and return statement are unchanged)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -314,34 +431,396 @@ export default function App() {
 
   useEffect(() => {
     if (!session && !demoAccess) return;
-    fetchIntel(); 
+    fetchIntel();
     fetchAircraft();
-    const i1 = setInterval(fetchIntel, 60000);
-    const i2 = setInterval(fetchAircraft, 15000);
-    // ... AIS WebSocket code remains the same
+    const interval = setInterval(fetchIntel, 60000);
+    const aircraftInterval = setInterval(fetchAircraft, 15000);
+
+    let ws: WebSocket | null = null;
+    try {
+      ws = new WebSocket('wss://stream.aisstream.io/v0/stream');
+      ws.onopen = () => {
+        ws!.send(JSON.stringify({
+          APIKey: (import.meta as any).env.VITE_AISSTREAM_KEY,
+          BoundingBoxes: [[[10, 25], [45, 65]]]
+        }));
+        addLog("AISSTREAM: LIVE VESSEL FEED CONNECTED.");
+      };
+      ws.onmessage = (raw) => {
+        try {
+          const msg = JSON.parse(raw.data);
+          const pos = msg.Message?.PositionReport;
+          const meta = msg.MetaData;
+          if (pos && meta && pos.Latitude && pos.Longitude) {
+            const prev = liveShipsRef.current.get("ais-" + meta.MMSI);
+            const ship: IntelligenceEvent = {
+              id: "ais-" + meta.MMSI, type: "vessel",
+              lat: pos.Latitude, lng: pos.Longitude,
+              label: meta.ShipName?.trim() || "VESSEL-" + meta.MMSI,
+              intensity: 0.4,
+              details: `LIVE vessel: ${meta.ShipName?.trim() || 'Unknown'}. MMSI: ${meta.MMSI}. Speed: ${pos.SpeedOverGround}kn. Heading: ${pos.TrueHeading}°. Course: ${pos.CourseOverGround}°.`,
+              timestamp: new Date().toISOString(),
+              path: [...(prev?.path || []).slice(-20), [pos.Latitude, pos.Longitude]] as [number,number][]
+            };
+            liveShipsRef.current.set(ship.id, ship);
+            mergeLiveData();
+          }
+        } catch (e) {}
+      };
+      ws.onerror = () => addLog("AISSTREAM: CONNECTION ERROR.");
+      ws.onclose = () => addLog("AISSTREAM: FEED DISCONNECTED.");
+    } catch (e) { addLog("AISSTREAM: FAILED TO CONNECT."); }
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(aircraftInterval);
+      ws?.close();
+    };
   }, [session, demoAccess]);
 
   useEffect(() => {
     if ((!session && !demoAccess) || !autoAnalysisActive) return;
-    const id = setInterval(() => { if (!isAnalyzing && events.length > 0) handleAnalyze(false); }, 120000);
-    return () => clearInterval(id);
+    const interval = setInterval(() => {
+      if (!isAnalyzing && events.length > 0) handleAnalyze(false);
+    }, 120000);
+    return () => clearInterval(interval);
   }, [session, autoAnalysisActive, isAnalyzing, events.length]);
 
+  // ── INSTRUCTIONS SCREEN ──────────────────────────────────────────────────
+  if (showInstructions) {
+    return (
+      <div className="flex h-screen w-screen bg-black text-[#00ff41] font-mono items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="border border-[#00ff41] p-10 max-w-lg w-full text-center space-y-6"
+        >
+          <div className="text-[10px] opacity-50 tracking-widest">OPHANIM-V1 ATLAS // PRE-FLIGHT CHECK</div>
+          <div className="text-3xl font-black animate-pulse tracking-tighter">⚠ SYSTEM REQUIREMENTS</div>
+
+          <div className="space-y-3 text-sm text-left border border-[#00ff41]/20 p-5 bg-[#00ff41]/5">
+            <div className="flex items-start gap-3">
+              <span className="text-lg">🖥️</span>
+              <div>
+                <div className="font-black text-[#00ff41]">USE LAPTOP / MONITOR / BIG SCREEN</div>
+                <div className="text-[10px] opacity-50 mt-0.5">Mobile devices not supported. Minimum 1280px width recommended.</div>
+              </div>
+            </div>
+            <div className="border-t border-[#00ff41]/10" />
+            <div className="flex items-start gap-3">
+              <span className="text-lg">🚫</span>
+              <div>
+                <div className="font-black text-[#00ff41]">DISABLE ALL AD BLOCKERS</div>
+                <div className="text-[10px] opacity-50 mt-0.5">Live data streams (ADS-B, AIS, FIRMS) will be blocked. Disable uBlock, AdBlock, Brave Shield, etc.</div>
+              </div>
+            </div>
+            <div className="border-t border-[#00ff41]/10" />
+            <div className="flex items-start gap-3">
+              <span className="text-lg">📡</span>
+              <div>
+                <div className="font-black text-[#00ff41]">STABLE INTERNET CONNECTION</div>
+                <div className="text-[10px] opacity-50 mt-0.5">Real-time feeds require consistent bandwidth. VPN may interfere.</div>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowInstructions(false)}
+            className="w-full bg-[#00ff41] text-black font-black py-4 text-sm hover:bg-white transition-colors tracking-widest uppercase"
+          >
+            ACKNOWLEDGED — ENTER SYSTEM →
+          </button>
+          <div className="text-[9px] opacity-30">By entering you confirm system requirements are met.</div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ── AUTH SCREEN ───────────────────────────────────────────────────────────
   if (!session && !demoAccess) {
     return <Auth onSuccess={() => { localStorage.setItem("ophanim_demo_access", "true"); setDemoAccess(true); }} />;
   }
 
-  const threatColor = (score: number) => score > 70 ? "#EF4444" : score > 40 ? "#F59E0B" : "#22C55E";
-
+  // ── MAIN APP ──────────────────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}
-      className="flex flex-col h-screen w-screen bg-[#0B0E14] text-[#E2E8F0] overflow-hidden">
-      
-      {/* Top Nav, Sidebar, Map, etc. — all your original JSX */}
-      {/* (Full return statement is very long, so I kept it exactly as your original working version) */}
+    <div className="flex h-screen w-screen bg-black text-[#00ff41] font-mono select-none overflow-hidden text-sm uppercase">
+      <div className="scanline" />
 
-      {/* ... Your full UI code from header to the end ... */}
+      <aside className="flex flex-col border-r hud-border hud-bg z-10 shrink-0 relative" style={{ width: sidebarWidth }}>
+        {/* Resize handle */}
+        <div onMouseDown={startResize} className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize z-20 hover:bg-[#00ff41]/40 transition-colors" />
 
+        <div className="p-4 border-b hud-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-[var(--color-brand-primary)]" />
+            <h1 className="font-bold tracking-tighter text-lg leading-none">OPHANIM-V1</h1>
+          </div>
+          <div className="text-[10px] bg-[var(--color-brand-primary)] text-black px-1 font-bold">LIVE</div>
+        </div>
+
+        <div className="flex border-b hud-border text-[10px] h-10">
+          <button onClick={() => setActiveTab("streams")} className={cn("flex-1 flex items-center justify-center gap-2 border-r hud-border", activeTab === "streams" && "bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]")}>
+            <Activity className="w-3 h-3" /> STREAMS
+          </button>
+          <button onClick={() => setActiveTab("news")} className={cn("flex-1 flex items-center justify-center gap-2 border-r hud-border", activeTab === "news" && "bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]")}>
+            <Newspaper className="w-3 h-3" /> NEWS
+          </button>
+          <button onClick={() => setActiveTab("cognition")} className={cn("flex-1 flex items-center justify-center gap-2", activeTab === "cognition" && "bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]")}>
+            <BrainCircuit className="w-3 h-3" /> COG
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+          <AnimatePresence mode="wait">
+            {activeTab === "streams" && (
+              <motion.div key="streams" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-1">
+                <div className="grid grid-cols-2 gap-1 mb-4">
+                  {[
+                    { key: 'aircraft', icon: <Plane className="w-3 h-3" />, label: 'AERIAL' },
+                    { key: 'vessel', icon: <Ship className="w-3 h-3" />, label: 'MARITIME' },
+                    { key: 'satellite', icon: <Orbit className="w-3 h-3" />, label: 'SAT TRACK' },
+                    { key: 'news', icon: <Globe className="w-3 h-3" />, label: 'EONET' },
+                    { key: 'seismic', icon: <Radio className="w-3 h-3" />, label: 'SEISMIC' },
+                    { key: 'conflict', icon: <Zap className="w-3 h-3" />, label: 'CONFLICT' },
+                    { key: 'fire', icon: <Flame className="w-3 h-3" />, label: 'FIRES' },
+                    { key: 'jamming', icon: <Wifi className="w-3 h-3" />, label: 'EW/JAM' },
+                  ].map(({ key, icon, label }) => (
+                    <button key={key}
+                      onClick={() => setLayers(l => ({ ...l, [key]: !l[key as keyof MapLayers] }))}
+                      className={cn("flex items-center gap-2 p-2 border hud-border text-[9px] transition-all", layers[key as keyof MapLayers] ? "bg-[var(--color-brand-primary)] text-black font-bold" : "opacity-40")}
+                    >{icon} {label}</button>
+                  ))}
+                </div>
+
+                <div className="mb-4 flex items-center gap-2">
+                  <button onClick={() => { fetchIntel(); fetchAircraft(); }} className="flex-1 flex items-center justify-center gap-2 p-2 border hud-border hud-bg hover:bg-[var(--color-brand-primary)]/20 text-[9px] transition-all">
+                    <RefreshCw className={cn("w-3 h-3", isAnalyzing && "animate-spin")} /> REFRESH
+                  </button>
+                  <label className="flex-1 flex items-center justify-center gap-2 p-2 border hud-border hud-bg hover:bg-[var(--color-brand-primary)]/20 text-[9px] transition-all cursor-pointer">
+                    <Database className={cn("w-3 h-3", isImporting && "animate-bounce")} /> CSV
+                    <input type="file" accept=".csv" className="hidden" onChange={(e) => e.target.files?.[0] && handleCSVImport(e.target.files[0])} />
+                  </label>
+                </div>
+
+                {selectedEvent && (
+                  <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="mt-4 p-4 border border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)]/5 space-y-3">
+                    <div className="flex justify-between items-center border-b border-[var(--color-brand-primary)]/30 pb-2">
+                      <span className="text-[10px] font-bold">TACTICAL_READOUT</span>
+                      <button onClick={() => setSelectedEvent(null)} className="hover:text-white">×</button>
+                    </div>
+                    <div className="space-y-2 text-[9px]">
+                      <div className="flex justify-between"><span className="opacity-50">TARGET</span><span className="font-bold text-white">{selectedEvent.id.toUpperCase()}</span></div>
+                      <div className="flex justify-between"><span className="opacity-50">COORDS</span><span>{selectedEvent.lat.toFixed(4)}N, {selectedEvent.lng.toFixed(4)}E</span></div>
+                      <div className="flex justify-between"><span className="opacity-50">TYPE</span><span className="text-[var(--color-brand-primary)]">{selectedEvent.type.toUpperCase()}</span></div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {filteredEvents.length === 0 && (
+                  <div className="p-4 border hud-border border-dashed opacity-30 text-center text-[10px]">NO_TARGETS // STREAMS_SILENT</div>
+                )}
+
+                {filteredEvents.map((event) => (
+                  <button key={event.id} onClick={() => setSelectedEvent(event)}
+                    className={cn("w-full text-left p-2 border hud-border flex items-center justify-between hover:bg-[var(--color-brand-primary)] hover:text-black transition-colors group", selectedEvent?.id === event.id && "bg-[var(--color-brand-primary)] text-black")}
+                  >
+                    <div className="truncate pr-2">
+                      <div className="text-[10px] font-bold">{event.type.toUpperCase()}</div>
+                      <div className="truncate text-[9px]">{event.label}</div>
+                    </div>
+                    <Crosshair className={cn("w-4 h-4 shrink-0 opacity-40 group-hover:opacity-100", event.intensity > 0.7 && "animate-pulse text-red-500")} />
+                  </button>
+                ))}
+              </motion.div>
+            )}
+
+            {activeTab === "news" && (
+              <motion.div key="news" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-2">
+                {news.length === 0 ? <div className="text-center opacity-40 mt-10 text-[10px]">NO NEWS FEEDS ACTIVE</div> : news.map((item, i) => (
+                  <a key={i} href={item.url} target="_blank" rel="noreferrer" className="p-2 border hud-border hud-bg hover:border-[var(--color-brand-primary)] transition-colors block">
+                    <div className="text-[9px] text-[var(--color-brand-primary)] mb-1 opacity-60">{item.source.name} • {new Date(item.publishedAt).toLocaleDateString()}</div>
+                    <div className="text-[11px] font-bold leading-tight line-clamp-2">{item.title}</div>
+                  </a>
+                ))}
+              </motion.div>
+            )}
+
+            {activeTab === "cognition" && (
+              <motion.div key="cognition" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-3">
+                <div className="text-[10px] opacity-40 mb-2">ASI-EVOLVE KNOWLEDGE BASE</div>
+                {cognition.length === 0 && <div className="text-center opacity-40 mt-10 text-[10px]">NO COGNITION NODES YET</div>}
+                {cognition.map((lesson) => (
+                  <div key={lesson.id} className="p-3 border hud-border hud-bg relative group">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-[var(--color-brand-primary)] scale-y-0 group-hover:scale-y-100 transition-transform origin-top" />
+                    <div className="text-[10px] font-bold text-[var(--color-brand-primary)] mb-1">{lesson.title}</div>
+                    <div className="text-[10px] leading-relaxed opacity-80">{lesson.lesson}</div>
+                    <div className="mt-2 text-[8px] opacity-40">{lesson.context?.toUpperCase()}</div>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <section className="mt-auto pt-4 flex flex-col min-h-[150px]">
+            <div className="flex items-center gap-2 mb-2 text-xs opacity-60">
+              <Terminal className="w-3 h-3" /><span>SYSTEM LOGS</span>
+            </div>
+            <div className="flex-1 bg-black/50 border hud-border p-2 overflow-y-auto text-[10px] leading-relaxed flex flex-col-reverse max-h-40">
+              {logs.map((log, i) => (
+                <div key={i} className="mb-px border-l-2 border-[var(--color-brand-primary)]/20 pl-2">
+                  <span className="opacity-40">[{new Date().toLocaleTimeString()}]</span> {log}
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div className="p-4 border-t hud-border flex items-center justify-between text-[10px]">
+          <button onClick={handleLogout} className="text-red-500/60 hover:text-red-500 px-1 border border-red-500/20 transition-all uppercase">DISCONNECT</button>
+          <button onClick={() => { fetchIntel(); fetchAircraft(); }} className="hover:text-[var(--color-brand-primary)] flex items-center gap-1">
+            <RefreshCw className="w-3 h-3" /> SYNC
+          </button>
+        </div>
+      </aside>
+
+      <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 w-80 pointer-events-none">
+        <AnimatePresence>
+          {alerts.map(alert => (
+            <motion.div key={alert.id} initial={{ x: 100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 100, opacity: 0 }}
+              className="hud-bg border-2 border-red-500 p-4 pointer-events-auto cursor-pointer"
+              onClick={() => setAlerts(prev => prev.filter(a => a.id !== alert.id))}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black text-red-500 animate-pulse flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> HIGH_THREAT_DETECTED
+                </span>
+                <span className="text-xl font-black text-red-500">{alert.score}%</span>
+              </div>
+              <p className="text-[10px] leading-tight opacity-90">{alert.msg}</p>
+              <div className="mt-2 text-[8px] opacity-40">Click to dismiss</div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      <main className="flex-1 relative flex flex-col shrink min-w-0">
+        <div className="flex-1 min-h-0">
+         <IntelMap
+  events={historicalEvents ?? filteredEvents}
+  selectedEvent={selectedEvent}
+  onEventClick={setSelectedEvent}
+/>
+<TimeMachine
+  onHistoricalData={setHistoricalEvents}
+  isLive={isLive}
+  setIsLive={setIsLive}
+/>
+        </div>
+        <div className="h-12 border-t hud-border hud-bg flex items-center px-4 justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <button onClick={() => handleAnalyze(true)} disabled={isAnalyzing}
+              className="flex items-center gap-2 bg-[var(--color-brand-primary)] text-black px-4 py-1 font-bold hover:bg-white hover:text-black transition-colors disabled:opacity-50"
+            >
+              {isAnalyzing ? <Cpu className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
+              {isAnalyzing ? "PROCESSING..." : "IN-DEPTH ASI-EVOLVE REVIEW"}
+            </button>
+            <div className="text-[9px] flex items-center gap-2 opacity-60">
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-primary)] animate-pulse" />
+              SUPABASE_LINK: ESTABLISHED
+            </div>
+            <button onClick={() => setAutoAnalysisActive(!autoAnalysisActive)}
+              className={cn("text-[10px] px-2 py-1 border transition-colors", autoAnalysisActive ? "border-[var(--color-brand-primary)] text-[var(--color-brand-primary)]" : "border-gray-600 text-gray-600")}
+            >AUTO-MONITOR: {autoAnalysisActive ? "ON" : "OFF"}</button>
+            <div className="text-[10px] flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3 text-yellow-500" /> THREAT MODE: CAUTION
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-[10px] opacity-60">
+            <span>CORE: DEEPSEEK-V3 + GIBS</span>
+            <span className="flex items-center gap-1"><Database className="w-3 h-3" /> {cognition.length} NODES</span>
+            <span className="flex items-center gap-1"><Activity className="w-3 h-3" /> {filteredEvents.length} TARGETS</span>
+          </div>
+        </div>
+      </main>
+
+      <AnimatePresence>
+        {(selectedEvent || analysis) && (
+          <motion.aside initial={{ x: 400 }} animate={{ x: 0 }} exit={{ x: 400 }}
+            className="w-96 border-l hud-border hud-bg flex flex-col shrink-0 z-10 shadow-2xl"
+          >
+            <div className="p-4 border-b hud-border flex items-center justify-between">
+              <div className="flex items-center gap-2"><Search className="w-4 h-4" /><h2 className="font-bold">TARGET RECONNAISSANCE</h2></div>
+              <button onClick={() => { setSelectedEvent(null); setAnalysis(null); }} className="hover:text-white p-1">&times;</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              {selectedEvent && (
+                <section>
+                  <div className="text-[10px] opacity-60 mb-1">ID: {selectedEvent.id}</div>
+                  <div className="text-xl font-bold mb-2 border-b-2 border-[var(--color-brand-primary)] pb-1">{selectedEvent.label}</div>
+                  <div className="grid grid-cols-2 gap-4 text-[10px] mb-4">
+                    <div className="hud-bg border hud-border p-2"><div className="opacity-50">LAT</div><div className="font-bold">{selectedEvent.lat.toFixed(4)}</div></div>
+                    <div className="hud-bg border hud-border p-2"><div className="opacity-50">LNG</div><div className="font-bold">{selectedEvent.lng.toFixed(4)}</div></div>
+                  </div>
+                  <div className="hud-bg border hud-border p-3 text-xs leading-relaxed border-l-4 border-[var(--color-brand-primary)]">{selectedEvent.details}</div>
+                </section>
+              )}
+
+              {analysis && (
+                <motion.section initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
+                  <div className="flex items-center gap-2 text-xs border-t hud-border pt-4">
+                    <Cpu className="w-4 h-4" /><span>ASI-EVOLVE + GIBS IMAGERY</span>
+                  </div>
+                  <div className="hud-bg border-2 border-[var(--color-brand-primary)]/40 p-4 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-2 h-full bg-[var(--color-brand-primary)]" />
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold">THREAT PROBABILITY</span>
+                      <span className={cn("text-2xl font-black", (analysis?.threat_score || 0) > 70 ? "text-red-500" : "text-[var(--color-brand-primary)]")}>
+                        {analysis?.threat_score || 0}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-black/50 h-1.5">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${analysis?.threat_score || 0}%` }}
+                        className={cn("h-full", (analysis?.threat_score || 0) > 70 ? "bg-red-500" : "bg-[var(--color-brand-primary)]")}
+                      />
+                    </div>
+                    {(analysis as any)?.gibs_analyzed && (
+                      <div className="mt-2 text-[8px] text-[var(--color-brand-primary)] opacity-70">✅ GIBS SATELLITE IMAGERY ANALYZED</div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-[10px] opacity-60 font-black">EVIDENCE TRAIL:</div>
+                    {Array.isArray(analysis?.evidence) ? analysis.evidence.map((ev, i) => (
+                      <div key={i} className="text-[11px] hud-bg border hud-border p-2 flex items-start gap-2 border-l-2 hover:border-l-[var(--color-brand-primary)] transition-all">
+                        <span className="text-[var(--color-brand-primary)] mt-1">•</span><span>{ev}</span>
+                      </div>
+                    )) : <div className="text-[10px] opacity-40">No evidence detected.</div>}
+                  </div>
+                  <div className="bg-[var(--color-brand-primary)] text-black p-4">
+                    <div className="text-[10px] font-black mb-1 underline">TACTICAL_RECOMMENDATION:</div>
+                    <p className="text-xs font-bold leading-tight uppercase italic">{analysis?.recommendation || "CONTINUE MONITORING"}</p>
+                  </div>
+                  <div className="text-[10px] opacity-50 italic">{analysis?.summary}</div>
+                </motion.section>
+              )}
+
+              {isAnalyzing && (
+                <div className="flex flex-col items-center justify-center p-12 text-center space-y-6">
+                  <div className="relative">
+                    <Cpu className="w-16 h-16 animate-pulse text-[var(--color-brand-primary)]" />
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="absolute inset-0 border-4 border-dashed border-[var(--color-brand-primary)]/20 rounded-full scale-150" />
+                  </div>
+                  <div className="space-y-3">
+                    <div className="text-[10px] font-black animate-pulse text-[var(--color-brand-primary)]">ASI-EVOLVE + GIBS ACTIVE</div>
+                    <div className="text-[9px] bg-white/5 border border-white/10 p-2">{analysisStatus}</div>
+                    <div className="text-[8px] opacity-40">INGESTING SATELLITE IMAGERY + TACTICAL NODES...</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
