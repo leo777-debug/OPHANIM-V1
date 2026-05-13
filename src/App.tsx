@@ -125,6 +125,7 @@ const [historicalEvents, setHistoricalEvents] = useState<IntelligenceEvent[] | n
   };
 
   const saveEventsToHistory = async (eventsToSave: IntelligenceEvent[]) => {
+  console.log('SAVING TO HISTORY:', eventsToSave.length, 'events');
   if (eventsToSave.length === 0) return;
   const rows = eventsToSave
     .filter(e => e.lat && e.lng)
@@ -140,7 +141,9 @@ const [historicalEvents, setHistoricalEvents] = useState<IntelligenceEvent[] | n
       recorded_at: new Date().toISOString(),
     }));
   try {
-    await supabase.from('event_history').insert(rows);
+    const { error } = await supabase.from('event_history').insert(rows);
+if (error) console.error('SUPABASE INSERT ERROR:', error);
+else console.log('SAVED TO SUPABASE OK');
   } catch(err) {
     console.warn('History save failed:', err);
   }
