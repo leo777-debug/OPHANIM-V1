@@ -1,3 +1,5 @@
+res.setHeader('Access-Control-Allow-Origin', '*');
+res.setHeader('Cache-Control', 'no-store');
 export default async function handler(req, res) {
   try {
     const resp = await fetch('https://www.vesselfinder.com/api/pub/vesselsonmap?bbox=25,10,65,30&zoom=7&show_names=1', {
